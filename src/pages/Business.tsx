@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useData } from '../store/DataContext';
-import { Card, Button, Input, Select, Label, Modal, Badge } from '../components/ui';
+import { Card, Button, Input, Select, Label, Modal, Badge, DatePicker } from '../components/ui';
 import { formatCurrency } from '../lib/utils';
 import { Brand, Lead, Client, Engagement, BusinessPayment, BusinessExpense } from '../types';
 import { format } from 'date-fns';
@@ -105,7 +105,20 @@ export default function Business() {
         </div>
       </div>
 
-      <div className="flex bg-white rounded-full p-1 shadow-sm border border-gray-100 max-w-full md:max-w-fit mb-2 overflow-x-auto no-scrollbar shrink-0">
+      {/* Mobile: dropdown tab selector */}
+      <div className="md:hidden">
+        <select
+          value={activeTab}
+          onChange={e => setActiveTab(e.target.value as any)}
+          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all appearance-none cursor-pointer"
+        >
+          {(['pipeline', 'clients', 'engagements', 'payments', 'expenses'] as const).map(tab => (
+            <option key={tab} value={tab}>{tab.charAt(0).toUpperCase() + tab.slice(1)}</option>
+          ))}
+        </select>
+      </div>
+      {/* Desktop: pill tabs */}
+      <div className="hidden md:flex bg-white rounded-full p-1 shadow-sm border border-gray-100 flex-wrap mb-2 shrink-0">
         {(['pipeline', 'clients', 'engagements', 'payments', 'expenses'] as const).map(tab => (
           <button 
             key={tab}
@@ -142,37 +155,43 @@ interface PipelineViewProps {
 
 function PipelineView({ leads, updateLead, deleteLead }: PipelineViewProps) {
   const stages = ['Lead', 'Qualified', 'Proposal Sent', 'Negotiation', 'Won', 'Lost'];
-  
-  return (
-    <div className="flex space-x-4 overflow-x-auto pb-4 h-full">
+  const [stageFilter, setStageFilter] = useState('All');
+
+  const filteredLeads = stageFilter === 'All' ? leads : leads.filter(l => l.stage === stageFilter);
+
+  // Desktop: Kanban columns, no horizontal scroll
+  const renderKanban = () => (
+    <div className="hidden lg:flex space-x-3 min-h-[400px]">
       {stages.map(stage => {
-        const stageLeads = leads.filter((l: any) => l.stage === stage);
+        const stageLeads = leads.filter(l => l.stage === stage);
         return (
-          <div key={stage} className="min-w-[280px] flex-1 bg-white border border-gray-200 flex flex-col h-full rounded-sm">
-            <div className="p-3 border-b border-gray-100 bg-gray-50 rounded-t-sm flex justify-between items-center">
-              <span className="text-xs font-semibold uppercase tracking-widest text-gray-900">{stage}</span>
-              <span className="text-[10px] tabular bg-gray-100 px-2 py-0.5 rounded text-gray-500">{stageLeads.length}</span>
+          <div key={stage} className="flex-1 bg-white border border-gray-200 flex flex-col rounded-xl min-w-0">
+            <div className="p-2 border-b border-gray-100 bg-gray-50 rounded-t-xl flex justify-between items-center">
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-900 truncate">{stage}</span>
+              <span className="text-[10px] tabular bg-gray-100 px-1.5 py-0.5 rounded text-gray-500 shrink-0 ml-1">{stageLeads.length}</span>
             </div>
-            <div className="flex-1 p-2 space-y-2 overflow-y-auto no-scrollbar">
-              {stageLeads.map((l: any) => (
-                <div key={l.id} className="bg-white border border-gray-200 p-3 shadow-sm hover:border-orange-500 rounded-xl transition-colors relative group">
-                  <div className="flex justify-between items-start">
-                    <div className="font-medium text-sm">{l.name}</div>
-                    <Badge>{l.brand}</Badge>
+            <div className="flex-1 p-1.5 space-y-1.5 overflow-y-auto no-scrollbar">
+              {stageLeads.length === 0 ? (
+                <div className="text-[10px] text-gray-400 text-center italic py-4">No leads</div>
+              ) : stageLeads.map(l => (
+                <div key={l.id} className="bg-white border border-gray-200 p-2 shadow-sm hover:border-orange-500 rounded-lg transition-colors group">
+                  <div className="flex justify-between items-start mb-1">
+                    <div className="font-medium text-xs text-gray-900 truncate">{l.name}</div>
+                    <Badge className="shrink-0 ml-1 !text-[9px] !px-1.5">{l.brand}</Badge>
                   </div>
-                  <div className="text-xl font-light tabular my-2">{formatCurrency(l.estimatedValue)}</div>
-                  <div className="text-[10px] text-gray-900 uppercase">Next: {l.nextAction} ({format(new Date(l.nextActionDate), 'MMM d')})</div>
-                  
-                  {/* Actions overlay */}
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex flex-col space-y-1 bg-white p-1 border border-gray-100 shadow-md rounded-lg">
-                    <select 
-                      className="text-[10px] bg-gray-100 border-none text-gray-900 py-1 cursor-pointer"
+                  <div className="text-sm font-light tabular mb-1">{formatCurrency(l.estimatedValue)}</div>
+                  {l.nextAction && (
+                    <div className="text-[9px] text-gray-500 truncate mb-1">Next: {l.nextAction}</div>
+                  )}
+                  <div className="flex items-center space-x-1 pt-1.5 border-t border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <select
+                      className="text-[9px] bg-gray-100 border-none text-gray-900 py-0.5 px-1 rounded cursor-pointer"
                       value={l.stage}
                       onChange={(e) => updateLead(l.id, { stage: e.target.value })}
                     >
-                      {stages.map(s => <option key={s} value={s}>Move to {s}</option>)}
+                      {stages.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
-                    <button onClick={() => { deleteLead(l.id) }} className="text-red-500 text-[10px] text-left px-1 hover:underline cursor-pointer">Delete</button>
+                    <button onClick={() => { deleteLead(l.id) }} className="text-red-500 text-[9px] hover:underline cursor-pointer ml-auto">Delete</button>
                   </div>
                 </div>
               ))}
@@ -181,6 +200,63 @@ function PipelineView({ leads, updateLead, deleteLead }: PipelineViewProps) {
         );
       })}
     </div>
+  );
+
+  // Mobile/Tablet: filtered list
+  const renderList = () => (
+    <div className="lg:hidden space-y-4">
+      <div className="flex items-center space-x-2">
+        <span className="text-xs font-semibold text-gray-500 uppercase">Stage:</span>
+        <select
+          value={stageFilter}
+          onChange={e => setStageFilter(e.target.value)}
+          className="bg-white border border-gray-200 rounded-xl px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all cursor-pointer"
+        >
+          <option value="All">All Stages</option>
+          {stages.map(s => (
+            <option key={s} value={s}>{s} ({leads.filter(l => l.stage === s).length})</option>
+          ))}
+        </select>
+      </div>
+      {filteredLeads.length === 0 ? (
+        <div className="text-gray-900 text-sm italic">No leads in this stage.</div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {filteredLeads.map(l => (
+            <div key={l.id} className="bg-white border border-gray-200 p-3 shadow-sm hover:border-orange-500 rounded-xl transition-colors">
+              <div className="flex justify-between items-start mb-1">
+                <div className="font-medium text-sm text-gray-900">{l.name}</div>
+                <Badge>{l.brand}</Badge>
+              </div>
+              <div className="flex items-center space-x-2 mb-1">
+                <Badge variant={l.stage === 'Won' ? 'success' : l.stage === 'Lost' ? 'danger' : 'warning'}>{l.stage}</Badge>
+              </div>
+              <div className="text-lg font-light tabular mb-1">{formatCurrency(l.estimatedValue)}</div>
+              {l.nextAction && (
+                <div className="text-[10px] text-gray-500 mb-2">Next: {l.nextAction} ({format(new Date(l.nextActionDate), 'MMM d')})</div>
+              )}
+              <div className="flex items-center space-x-2 pt-2 border-t border-gray-100">
+                <select
+                  className="text-[10px] bg-gray-100 border-none text-gray-900 py-1 px-2 rounded cursor-pointer"
+                  value={l.stage}
+                  onChange={(e) => updateLead(l.id, { stage: e.target.value })}
+                >
+                  {stages.map(s => <option key={s} value={s}>Move to {s}</option>)}
+                </select>
+                <button onClick={() => { deleteLead(l.id) }} className="text-red-500 text-[10px] hover:underline cursor-pointer ml-auto">Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <>
+      {renderKanban()}
+      {renderList()}
+    </>
   );
 }
 
@@ -195,28 +271,29 @@ function ClientsView({ clients }: ClientsViewProps) {
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="text-xs uppercase text-gray-500 tracking-wider border-b border-gray-200">
-            <th className="pb-2 p-6 font-semibold">Client Name</th>
-            <th className="pb-2 p-6 font-semibold">Services</th>
-            <th className="pb-2 p-6 font-semibold">Contact</th>
-            <th className="pb-2 p-6 font-semibold">Status</th>
+            <th className="pb-2 p-4 md:p-6 font-semibold">Client Name</th>
+            <th className="pb-2 p-4 md:p-6 font-semibold hidden md:table-cell">Services</th>
+            <th className="pb-2 p-4 md:p-6 font-semibold hidden md:table-cell">Contact</th>
+            <th className="pb-2 p-4 md:p-6 font-semibold">Status</th>
           </tr>
         </thead>
         <tbody>
           {clients.map((c: any) => (
             <tr key={c.id} className="border-b border-gray-200 hover:bg-gray-50">
-              <td className="p-6 font-medium">
+              <td className="p-4 md:p-6 font-medium">
                 <div>{c.name}</div>
+                <div className="md:hidden text-[10px] text-gray-500 mt-0.5">{c.contact}</div>
                 {c.businessName && <div className="text-[10px] text-gray-900 mt-1">{c.businessName}</div>}
               </td>
-              <td className="p-6">
+              <td className="p-4 md:p-6 hidden md:table-cell">
                 <div className="flex flex-wrap gap-1">
                   {c.services?.map((s: string) => (
                     <Badge key={s} variant="default">{s}</Badge>
                   ))}
                 </div>
               </td>
-              <td className="p-6 text-gray-900">{c.contact}</td>
-              <td className="p-6">
+              <td className="p-4 md:p-6 hidden md:table-cell text-gray-900">{c.contact}</td>
+              <td className="p-4 md:p-6">
                 <Badge variant={c.status === 'Active' ? 'success' : c.status === 'Paused' ? 'warning' : 'danger'}>{c.status}</Badge>
               </td>
             </tr>
@@ -239,10 +316,10 @@ function EngagementsView({ engagements, clients }: EngagementsViewProps) {
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="text-xs uppercase text-gray-500 tracking-wider border-b border-gray-200">
-            <th className="pb-2 p-6 font-semibold">Client</th>
-            <th className="pb-2 p-6 font-semibold">Terms</th>
-            <th className="pb-2 p-6 font-semibold text-right">Value</th>
-            <th className="pb-2 p-6 font-semibold">Status</th>
+            <th className="pb-2 p-4 md:p-6 font-semibold">Client</th>
+            <th className="pb-2 p-4 md:p-6 font-semibold hidden md:table-cell">Terms</th>
+            <th className="pb-2 p-4 md:p-6 font-semibold text-right">Value</th>
+            <th className="pb-2 p-4 md:p-6 font-semibold">Status</th>
           </tr>
         </thead>
         <tbody>
@@ -250,10 +327,10 @@ function EngagementsView({ engagements, clients }: EngagementsViewProps) {
             const client = clients.find((c: any) => c.id === e.clientId);
             return (
               <tr key={e.id} className="border-b border-gray-200 hover:bg-gray-50">
-                <td className="p-6 font-medium">{client?.name || 'Unknown'} <Badge className="ml-2">{e.brand}</Badge></td>
-                <td className="p-6 text-gray-900">{e.paymentTerms} (Started {format(new Date(e.startDate), 'MMM yyyy')})</td>
-                <td className="p-6 text-right tabular text-emerald-500 font-semibold">{formatCurrency(e.value)}</td>
-                <td className="p-6">
+                <td className="p-4 md:p-6 font-medium">{client?.name || 'Unknown'} <Badge className="ml-2">{e.brand}</Badge></td>
+                <td className="p-4 md:p-6 text-gray-900 hidden md:table-cell">{e.paymentTerms} (Started {format(new Date(e.startDate), 'MMM yyyy')})</td>
+                <td className="p-4 md:p-6 text-right tabular text-emerald-500 font-semibold">{formatCurrency(e.value)}</td>
+                <td className="p-4 md:p-6">
                   <Badge variant={e.status === 'Active' ? 'success' : 'default'}>{e.status}</Badge>
                 </td>
               </tr>
@@ -279,10 +356,10 @@ function PaymentsView({ payments, clients, engagements, deletePayment }: Payment
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="text-xs uppercase text-gray-500 tracking-wider border-b border-gray-200">
-            <th className="pb-2 p-6 font-semibold">Date</th>
-            <th className="pb-2 p-6 font-semibold">Client & Ref</th>
-            <th className="pb-2 p-6 font-semibold text-right">Amount</th>
-            <th className="pb-2 p-6"></th>
+            <th className="pb-2 p-4 md:p-6 font-semibold">Date</th>
+            <th className="pb-2 p-4 md:p-6 font-semibold">Client & Ref</th>
+            <th className="pb-2 p-4 md:p-6 font-semibold text-right">Amount</th>
+            <th className="pb-2 p-4 md:p-6"></th>
           </tr>
         </thead>
         <tbody>
@@ -290,13 +367,13 @@ function PaymentsView({ payments, clients, engagements, deletePayment }: Payment
             const client = clients.find((c: any) => c.id === p.clientId);
             return (
               <tr key={p.id} className="border-b border-gray-200 hover:bg-gray-50">
-                <td className="p-6 text-gray-900">{format(new Date(p.date), 'MMM d, yyyy')}</td>
-                <td className="p-6">
+                <td className="p-4 md:p-6 text-gray-900">{format(new Date(p.date), 'MMM d, yyyy')}</td>
+                <td className="p-4 md:p-6">
                   <div className="font-medium">{client?.name || 'Unknown'} <Badge className="ml-2">{p.brand}</Badge></div>
                   <div className="text-[10px] text-gray-900 mt-1">Ref: {p.invoiceReference}</div>
                 </td>
-                <td className="p-6 text-right tabular text-emerald-500 font-semibold">+{formatCurrency(p.amount)}</td>
-                <td className="p-6 text-right">
+                <td className="p-4 md:p-6 text-right tabular text-emerald-500 font-semibold">+{formatCurrency(p.amount)}</td>
+                <td className="p-4 md:p-6 text-right">
                   <button onClick={() => { deletePayment(p.id) }} className="text-gray-900 hover:text-red-500 p-1 cursor-pointer"><Trash2 size={14} /></button>
                 </td>
               </tr>
@@ -320,22 +397,22 @@ function ExpensesView({ expenses, deleteExpense }: ExpensesViewProps) {
       <table className="w-full text-left text-sm">
         <thead>
           <tr className="text-xs uppercase text-gray-500 tracking-wider border-b border-gray-200">
-            <th className="pb-2 p-6 font-semibold">Date</th>
-            <th className="pb-2 p-6 font-semibold">Brand & Category</th>
-            <th className="pb-2 p-6 font-semibold text-right">Amount</th>
-            <th className="pb-2 p-6"></th>
+            <th className="pb-2 p-4 md:p-6 font-semibold">Date</th>
+            <th className="pb-2 p-4 md:p-6 font-semibold">Brand & Category</th>
+            <th className="pb-2 p-4 md:p-6 font-semibold text-right">Amount</th>
+            <th className="pb-2 p-4 md:p-6"></th>
           </tr>
         </thead>
         <tbody>
           {expenses.map((e: any) => (
             <tr key={e.id} className="border-b border-gray-200 hover:bg-gray-50">
-              <td className="p-6 text-gray-900">{format(new Date(e.date), 'MMM d, yyyy')}</td>
-              <td className="p-6">
+              <td className="p-4 md:p-6 text-gray-900">{format(new Date(e.date), 'MMM d, yyyy')}</td>
+              <td className="p-4 md:p-6">
                 <Badge>{e.brand}</Badge>
                 <span className="ml-2 text-gray-800">{e.category}</span>
               </td>
-              <td className="p-6 text-right tabular text-red-500 font-semibold">-{formatCurrency(e.amount)}</td>
-              <td className="p-6 text-right">
+              <td className="p-4 md:p-6 text-right tabular text-red-500 font-semibold">-{formatCurrency(e.amount)}</td>
+              <td className="p-4 md:p-6 text-right">
                 <button onClick={() => { deleteExpense(e.id) }} className="text-gray-900 hover:text-red-500 p-1 cursor-pointer"><Trash2 size={14} /></button>
               </td>
             </tr>
@@ -361,12 +438,12 @@ function LeadModal({ isOpen, onClose, onSave }: LeadModalProps) {
   const [stage, setStage] = useState('Lead');
   const [estimatedValue, setEstimatedValue] = useState('');
   const [nextAction, setNextAction] = useState('');
-  const [nextActionDate, setNextActionDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [nextActionDate, setNextActionDate] = useState(new Date());
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !estimatedValue) return;
-    onSave({ name, brand, source, stage, estimatedValue: parseFloat(estimatedValue), nextAction, nextActionDate });
+    onSave({ name, brand, source, stage, estimatedValue: parseFloat(estimatedValue), nextAction, nextActionDate: format(nextActionDate, 'yyyy-MM-dd') });
     onClose();
   };
 
@@ -383,7 +460,7 @@ function LeadModal({ isOpen, onClose, onSave }: LeadModalProps) {
         <div><Label>Source / Contact</Label><Input value={source} onChange={e => setSource(e.target.value)} /></div>
         <div><Label>Estimated Value</Label><Input type="number" value={estimatedValue} onChange={e => setEstimatedValue(e.target.value)} required /></div>
         <div><Label>Next Action</Label><Input value={nextAction} onChange={e => setNextAction(e.target.value)} /></div>
-        <div><Label>Next Action Date</Label><Input type="date" value={nextActionDate} onChange={e => setNextActionDate(e.target.value)} required /></div>
+        <div><Label>Next Action Date</Label><DatePicker value={nextActionDate} onChange={setNextActionDate} /></div>
         <Button type="submit" className="w-full mt-4">Save Lead</Button>
       </form>
     </Modal>
@@ -405,7 +482,7 @@ function PaymentModal({ isOpen, onClose, onSaveIncoming, onSaveOutgoing, clients
   const [clientId, setClientId] = useState('');
   const [engagementId, setEngagementId] = useState('');
   const [amount, setAmount] = useState('');
-  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [date, setDate] = useState(new Date());
   const [invoiceReference, setInvoiceReference] = useState('');
 
   const [brand, setBrand] = useState<Brand>('Infinity Innovations');
@@ -418,26 +495,26 @@ function PaymentModal({ isOpen, onClose, onSaveIncoming, onSaveOutgoing, clients
     if (type === 'incoming') {
       if (!clientId) return;
       const client = clients.find((c: any) => c.id === clientId);
-      onSaveIncoming({ clientId, engagementId, amount: parseFloat(amount), date, invoiceReference, brand: client?.brand || 'Infinity Innovations' });
+      onSaveIncoming({ clientId, engagementId, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd'), invoiceReference, brand: client?.brand || 'Infinity Innovations' });
     } else {
-      onSaveOutgoing({ brand, category, amount: parseFloat(amount), date });
+      onSaveOutgoing({ brand, category, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd') });
     }
     onClose();
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Log Transaction">
-      <div className="flex bg-white border border-gray-200 p-1 mb-4 rounded-md">
+      <div className="flex bg-gray-100 p-1 mb-4 rounded-xl">
         <button 
           type="button"
-          className={`flex-1 px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-sm transition-colors ${type === 'incoming' ? 'bg-white text-gray-900 shadow' : 'text-gray-900 hover:text-gray-900'}`}
+          className={`flex-1 px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg transition-all ${type === 'incoming' ? 'bg-[#18181b] text-white shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
           onClick={() => setType('incoming')}
         >
           Incoming
         </button>
         <button 
           type="button"
-          className={`flex-1 px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-sm transition-colors ${type === 'outgoing' ? 'bg-white text-gray-900 shadow' : 'text-gray-900 hover:text-gray-900'}`}
+          className={`flex-1 px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg transition-all ${type === 'outgoing' ? 'bg-[#18181b] text-white shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
           onClick={() => setType('outgoing')}
         >
           Outgoing
@@ -464,7 +541,7 @@ function PaymentModal({ isOpen, onClose, onSaveIncoming, onSaveOutgoing, clients
               </div>
             )}
             <div><Label>Amount</Label><Input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} required /></div>
-            <div><Label>Date</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} required /></div>
+            <div><Label>Date</Label><DatePicker value={date} onChange={setDate} /></div>
             <div><Label>Invoice Reference</Label><Input value={invoiceReference} onChange={e => setInvoiceReference(e.target.value)} /></div>
           </>
         ) : (
@@ -482,11 +559,14 @@ function PaymentModal({ isOpen, onClose, onSaveIncoming, onSaveOutgoing, clients
                 <option value="Ads">Ads</option>
                 <option value="Contractor">Contractor</option>
                 <option value="Subscription">Subscription</option>
+                <option value="Domain Purchase">Domain Purchase</option>
+                <option value="SSL Certificate">SSL Certificate</option>
+                <option value="Posting Subscription">Posting Subscription</option>
                 <option value="Other">Other</option>
               </Select>
             </div>
             <div><Label>Amount</Label><Input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} required /></div>
-            <div><Label>Date</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} required /></div>
+            <div><Label>Date</Label><DatePicker value={date} onChange={setDate} /></div>
           </>
         )}
         <Button type="submit" className="w-full mt-4" disabled={type === 'incoming' && clients.length === 0}>Save {type === 'incoming' ? 'Payment' : 'Expense'}</Button>
@@ -505,12 +585,12 @@ function BusinessExpenseModal({ isOpen, onClose, onSave }: BusinessExpenseModalP
   const [brand, setBrand] = useState<Brand>('Infinity Innovations');
   const [category, setCategory] = useState<BusinessExpense['category']>('Tools');
   const [amount, setAmount] = useState('');
-  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [date, setDate] = useState(new Date());
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount) return;
-    onSave({ brand, category, amount: parseFloat(amount), date });
+    onSave({ brand, category, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd') });
     onClose();
   };
 
@@ -530,11 +610,14 @@ function BusinessExpenseModal({ isOpen, onClose, onSave }: BusinessExpenseModalP
             <option value="Ads">Ads</option>
             <option value="Contractor">Contractor</option>
             <option value="Subscription">Subscription</option>
+            <option value="Domain Purchase">Domain Purchase</option>
+            <option value="SSL Certificate">SSL Certificate</option>
+            <option value="Posting Subscription">Posting Subscription</option>
             <option value="Other">Other</option>
           </Select>
         </div>
         <div><Label>Amount</Label><Input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} required /></div>
-        <div><Label>Date</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} required /></div>
+        <div><Label>Date</Label><DatePicker value={date} onChange={setDate} /></div>
         <Button type="submit" className="w-full mt-4">Save Expense</Button>
       </form>
     </Modal>
@@ -628,12 +711,12 @@ function EngagementModal({ isOpen, onClose, onSave, clients }: EngagementModalPr
   const [paymentTerms, setPaymentTerms] = useState<'Milestones' | 'Monthly' | 'Upfront'>('Milestones');
   const [value, setValue] = useState('');
   const [status, setStatus] = useState<'Active' | 'Completed' | 'On Hold'>('Active');
-  const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [startDate, setStartDate] = useState(new Date());
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!clientId || !value) return;
-    onSave({ clientId, brand, type, paymentTerms, value: parseFloat(value), status, startDate });
+    onSave({ clientId, brand, type, paymentTerms, value: parseFloat(value), status, startDate: format(startDate, 'yyyy-MM-dd') });
     onClose();
   };
 
@@ -681,11 +764,10 @@ function EngagementModal({ isOpen, onClose, onSave, clients }: EngagementModalPr
           </div>
         </div>
         <div><Label>Value</Label><Input type="number" step="0.01" value={value} onChange={e => setValue(e.target.value)} required /></div>
-        <div><Label>Start Date</Label><Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required /></div>
+        <div><Label>Start Date</Label><DatePicker value={startDate} onChange={setStartDate} /></div>
         
         <Button type="submit" className="w-full mt-4">Save Engagement</Button>
       </form>
     </Modal>
   );
 }
-

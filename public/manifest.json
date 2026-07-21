@@ -1,15 +1,21 @@
 {
-  "name": "Finance App",
-  "short_name": "Finance",
+  "name": "ShubhStack",
+  "short_name": "ShubhStack",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#f97316",
   "icons": [
     {
-      "src": "/icon.svg",
-      "type": "image/svg+xml",
+      "src": "/logo.png",
+      "type": "image/png",
       "sizes": "512x512",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "type": "image/png",
+      "sizes": "192x192",
       "purpose": "any maskable"
     }
   ]

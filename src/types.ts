@@ -7,6 +7,8 @@ export interface PersonalIncome {
   date: string;
   category: 'Salary' | 'Trip Manager Fee' | 'Business Draw' | 'Other';
   isRecurring: boolean;
+  reference?: string;
+  description?: string;
   createdAt: string;
   userId?: string;
 }
@@ -19,6 +21,7 @@ export interface PersonalExpense {
   date: string;
   dayOfWeek: string;
   paymentMethod: string;
+  description?: string;
   createdAt: string;
   userId?: string;
 }
@@ -91,7 +94,7 @@ export interface BusinessPayment {
 export interface BusinessExpense {
   id: string;
   brand: Brand;
-  category: 'Tools' | 'Ads' | 'Contractor' | 'Subscription' | 'Other';
+  category: 'Tools' | 'Ads' | 'Contractor' | 'Subscription' | 'Domain Purchase' | 'SSL Certificate' | 'Posting Subscription' | 'Other';
   amount: number;
   date: string;
   createdAt: string;
@@ -137,8 +140,10 @@ export interface Meeting {
   id: string;
   title: string;
   clientId?: string;
+  leadName?: string;
   date: string;
   time: string;
+  reason?: string;
   createdAt: string;
   userId?: string;
 }

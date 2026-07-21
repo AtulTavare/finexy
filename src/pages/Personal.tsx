@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useData } from '../store/DataContext';
-import { Card, Button, Input, Select, Label, Modal, Badge } from '../components/ui';
+import { Card, Button, Input, Select, Label, Modal, Badge, DatePicker, Textarea } from '../components/ui';
 import { formatCurrency } from '../lib/utils';
 import { PersonalIncome, PersonalExpense, PersonalDebt } from '../types';
 import { format } from 'date-fns';
@@ -40,7 +40,6 @@ export default function Personal() {
         setActiveTab('debts');
         setShowDebtModal(true);
       }
-      // Clear state so it doesn't reopen on refresh
       window.history.replaceState({}, document.title);
     }
   }, [location.state]);
@@ -105,14 +104,15 @@ export default function Personal() {
                   <tbody>
                     {sortedIncome.map(inc => (
                       <tr key={inc.id} className="border-b border-gray-200 hover:bg-gray-50">
-                        <td className="py-3 hidden md:table-cell text-gray-900">{format(new Date(inc.date), 'MMM d, yyyy')}</td>
-                        <td className="py-3">
+                        <td className="py-2.5 md:py-3 hidden md:table-cell text-gray-900">{format(new Date(inc.date), 'MMM d, yyyy')}</td>
+                        <td className="py-2.5 md:py-3">
                           <div className="font-medium">{inc.source}</div>
+                          {inc.reference && <div className="text-[10px] text-gray-500 mt-0.5">Ref: {inc.reference}</div>}
                           <div className="md:hidden text-[10px] text-gray-900 mt-1">{format(new Date(inc.date), 'MMM d')} &bull; {inc.category}</div>
                         </td>
-                        <td className="py-3 hidden md:table-cell"><Badge>{inc.category}</Badge> {inc.isRecurring && <span className="ml-1 text-[10px] text-gray-900">↻</span>}</td>
-                        <td className="py-3 text-right tabular text-emerald-500 font-semibold">+{formatCurrency(inc.amount)}</td>
-                        <td className="py-3 text-right">
+                        <td className="py-2.5 md:py-3 hidden md:table-cell"><Badge>{inc.category}</Badge> {inc.isRecurring && <span className="ml-1 text-[10px] text-gray-900">↻</span>}</td>
+                        <td className="py-2.5 md:py-3 text-right tabular text-emerald-500 font-semibold">+{formatCurrency(inc.amount)}</td>
+                        <td className="py-2.5 md:py-3 text-right">
                           <button onClick={() => { deletePersonalIncome(inc.id) }} className="text-gray-900 hover:text-red-500 p-1 cursor-pointer"><Trash2 size={14} /></button>
                         </td>
                       </tr>
@@ -141,15 +141,16 @@ export default function Personal() {
                   <tbody>
                     {sortedExpenses.map(exp => (
                       <tr key={exp.id} className="border-b border-gray-200 hover:bg-gray-50">
-                        <td className="py-3 hidden md:table-cell text-gray-900">{format(new Date(exp.date), 'MMM d, yyyy')}</td>
-                        <td className="py-3">
+                        <td className="py-2.5 md:py-3 hidden md:table-cell text-gray-900">{format(new Date(exp.date), 'MMM d, yyyy')}</td>
+                        <td className="py-2.5 md:py-3">
                           <div className="font-medium">{exp.reason}</div>
+                          {exp.description && <div className="text-[10px] text-gray-500 mt-0.5">{exp.description}</div>}
                           <div className="md:hidden text-[10px] text-gray-900 mt-1">{format(new Date(exp.date), 'MMM d')} &bull; {exp.category}</div>
                           <div className="hidden md:block text-[10px] text-gray-900 mt-1">via {exp.paymentMethod}</div>
                         </td>
-                        <td className="py-3 hidden md:table-cell"><Badge>{exp.category}</Badge></td>
-                        <td className="py-3 text-right tabular text-red-500 font-semibold">-{formatCurrency(exp.amount)}</td>
-                        <td className="py-3 text-right">
+                        <td className="py-2.5 md:py-3 hidden md:table-cell"><Badge>{exp.category}</Badge></td>
+                        <td className="py-2.5 md:py-3 text-right tabular text-red-500 font-semibold">-{formatCurrency(exp.amount)}</td>
+                        <td className="py-2.5 md:py-3 text-right">
                           <button onClick={() => { deletePersonalExpense(exp.id) }} className="text-gray-900 hover:text-red-500 p-1 cursor-pointer"><Trash2 size={14} /></button>
                         </td>
                       </tr>
@@ -178,14 +179,14 @@ export default function Personal() {
                   <tbody>
                     {sortedDebts.map(debt => (
                       <tr key={debt.id} className="border-b border-gray-200 hover:bg-gray-50">
-                        <td className="py-3 hidden md:table-cell text-gray-900">{format(new Date(debt.dueDate), 'MMM d, yyyy')}</td>
-                        <td className="py-3">
+                        <td className="py-2.5 md:py-3 hidden md:table-cell text-gray-900">{format(new Date(debt.dueDate), 'MMM d, yyyy')}</td>
+                        <td className="py-2.5 md:py-3">
                           <div className="font-medium">{debt.partyName}</div>
                           <div className="md:hidden text-[10px] text-gray-900 mt-1">Due {format(new Date(debt.dueDate), 'MMM d')}</div>
                           <div className="mt-1"><Badge variant={debt.type === 'I Owe' ? 'danger' : 'success'}>{debt.type}</Badge></div>
                         </td>
-                        <td className="py-3 text-right tabular">{formatCurrency(debt.amount)}</td>
-                        <td className="py-3 text-center">
+                        <td className="py-2.5 md:py-3 text-right tabular">{formatCurrency(debt.amount)}</td>
+                        <td className="py-2.5 md:py-3 text-center">
                            <button 
                              onClick={() => updatePersonalDebt(debt.id, { status: debt.status === 'Paid' ? 'Pending' : 'Paid' })}
                              className={`text-[10px] uppercase font-semibold tracking-widest cursor-pointer px-2 py-1 rounded-sm transition-colors ${debt.status === 'Paid' ? 'bg-green-300 text-gray-900' : 'bg-gray-200 text-gray-900 hover:bg-gray-300'}`}
@@ -193,7 +194,7 @@ export default function Personal() {
                              {debt.status}
                            </button>
                         </td>
-                        <td className="py-3 text-right">
+                        <td className="py-2.5 md:py-3 text-right">
                           <button onClick={() => { deletePersonalDebt(debt.id) }} className="text-gray-900 hover:text-red-500 p-1 cursor-pointer"><Trash2 size={14} /></button>
                         </td>
                       </tr>
@@ -224,15 +225,25 @@ interface IncomeModalProps {
 function IncomeModal({ isOpen, onClose, onSave }: IncomeModalProps) {
   const [source, setSource] = useState('');
   const [amount, setAmount] = useState('');
-  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [date, setDate] = useState(new Date());
   const [category, setCategory] = useState<PersonalIncome['category']>('Salary');
   const [isRecurring, setIsRecurring] = useState(false);
+  const [reference, setReference] = useState('');
+  const [description, setDescription] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!source || !amount || !date) return;
-    onSave({ source, amount: parseFloat(amount), date, category, isRecurring });
-    setSource(''); setAmount(''); setIsRecurring(false);
+    onSave({
+      source,
+      amount: parseFloat(amount),
+      date: format(date, 'yyyy-MM-dd'),
+      category,
+      isRecurring,
+      reference: reference || undefined,
+      description: description || undefined,
+    });
+    setSource(''); setAmount(''); setIsRecurring(false); setReference(''); setDescription('');
     onClose();
   };
 
@@ -240,8 +251,11 @@ function IncomeModal({ isOpen, onClose, onSave }: IncomeModalProps) {
     <Modal isOpen={isOpen} onClose={onClose} title="Add Income">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div><Label>Source</Label><Input value={source} onChange={e => setSource(e.target.value)} placeholder="e.g. Acme Corp" required /></div>
-        <div><Label>Amount</Label><Input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} required /></div>
-        <div><Label>Date</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} required /></div>
+        <div className="grid grid-cols-2 gap-4">
+          <div><Label>Reference (Optional)</Label><Input value={reference} onChange={e => setReference(e.target.value)} placeholder="e.g. Invoice #123" /></div>
+          <div><Label>Amount</Label><Input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} required /></div>
+        </div>
+        <div><Label>Date</Label><DatePicker value={date} onChange={setDate} /></div>
         <div>
           <Label>Category</Label>
           <Select value={category} onChange={e => setCategory(e.target.value as any)}>
@@ -255,6 +269,7 @@ function IncomeModal({ isOpen, onClose, onSave }: IncomeModalProps) {
           <input type="checkbox" checked={isRecurring} onChange={e => setIsRecurring(e.target.checked)} id="recur" className="accent-white cursor-pointer w-4 h-4" />
           <Label htmlFor="recur" className="mb-0 cursor-pointer">Recurring Income</Label>
         </div>
+        <div><Label>Description (Optional)</Label><Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Additional notes..." /></div>
         <Button type="submit" className="w-full mt-4">Save Income</Button>
       </form>
     </Modal>
@@ -270,15 +285,23 @@ interface ExpenseModalProps {
 function ExpenseModal({ isOpen, onClose, onSave }: ExpenseModalProps) {
   const [reason, setReason] = useState('');
   const [amount, setAmount] = useState('');
-  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [date, setDate] = useState(new Date());
   const [category, setCategory] = useState('Food & Dining');
   const [paymentMethod, setPaymentMethod] = useState('Credit Card');
+  const [description, setDescription] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!reason || !amount || !date) return;
-    onSave({ reason, amount: parseFloat(amount), date, category, paymentMethod });
-    setReason(''); setAmount('');
+    onSave({
+      reason,
+      amount: parseFloat(amount),
+      date: format(date, 'yyyy-MM-dd'),
+      category,
+      paymentMethod,
+      description: description || undefined,
+    });
+    setReason(''); setAmount(''); setDescription('');
     onClose();
   };
 
@@ -287,7 +310,7 @@ function ExpenseModal({ isOpen, onClose, onSave }: ExpenseModalProps) {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div><Label>Reason</Label><Input value={reason} onChange={e => setReason(e.target.value)} placeholder="e.g. Groceries" required /></div>
         <div><Label>Amount</Label><Input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} required /></div>
-        <div><Label>Date</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} required /></div>
+        <div><Label>Date</Label><DatePicker value={date} onChange={setDate} /></div>
         <div>
           <Label>Category</Label>
           <Select value={category} onChange={e => setCategory(e.target.value)}>
@@ -295,6 +318,9 @@ function ExpenseModal({ isOpen, onClose, onSave }: ExpenseModalProps) {
             <option value="Housing">Housing</option>
             <option value="Transportation">Transportation</option>
             <option value="Entertainment">Entertainment</option>
+            <option value="Domain Purchase">Domain Purchase</option>
+            <option value="SSL Certificate">SSL Certificate</option>
+            <option value="Posting Subscription">Posting Subscription</option>
             <option value="Other">Other</option>
           </Select>
         </div>
@@ -305,8 +331,10 @@ function ExpenseModal({ isOpen, onClose, onSave }: ExpenseModalProps) {
             <option value="Debit Card">Debit Card</option>
             <option value="Cash">Cash</option>
             <option value="Bank Transfer">Bank Transfer</option>
+            <option value="UPI">UPI</option>
           </Select>
         </div>
+        <div><Label>Description (Optional)</Label><Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Additional notes..." /></div>
         <Button type="submit" className="w-full mt-4">Save Expense</Button>
       </form>
     </Modal>
@@ -322,13 +350,13 @@ interface DebtModalProps {
 function DebtModal({ isOpen, onClose, onSave }: DebtModalProps) {
   const [partyName, setPartyName] = useState('');
   const [amount, setAmount] = useState('');
-  const [dueDate, setDueDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [dueDate, setDueDate] = useState(new Date());
   const [type, setType] = useState<'I Owe' | 'Owed to Me'>('I Owe');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!partyName || !amount || !dueDate) return;
-    onSave({ partyName, amount: parseFloat(amount), dueDate, type, status: 'Pending' });
+    onSave({ partyName, amount: parseFloat(amount), dueDate: format(dueDate, 'yyyy-MM-dd'), type, status: 'Pending' });
     setPartyName(''); setAmount('');
     onClose();
   };
@@ -336,13 +364,13 @@ function DebtModal({ isOpen, onClose, onSave }: DebtModalProps) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Add Debt">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="flex bg-gray-100 p-1 rounded-sm mb-4">
-          <button type="button" className={`flex-1 py-2 text-xs font-semibold uppercase cursor-pointer transition-colors ${type === 'I Owe' ? 'bg-white text-gray-900 shadow' : 'text-gray-900 hover:text-gray-900'}`} onClick={() => setType('I Owe')}>I Owe</button>
-          <button type="button" className={`flex-1 py-2 text-xs font-semibold uppercase cursor-pointer transition-colors ${type === 'Owed to Me' ? 'bg-white text-gray-900 shadow' : 'text-gray-900 hover:text-gray-900'}`} onClick={() => setType('Owed to Me')}>Owed To Me</button>
+        <div className="flex bg-gray-100 p-1 rounded-xl mb-4">
+          <button type="button" className={`flex-1 py-2 text-xs font-semibold uppercase cursor-pointer rounded-lg transition-all ${type === 'I Owe' ? 'bg-[#18181b] text-white shadow-sm' : 'text-gray-500 hover:text-gray-900'}`} onClick={() => setType('I Owe')}>I Owe</button>
+          <button type="button" className={`flex-1 py-2 text-xs font-semibold uppercase cursor-pointer rounded-lg transition-all ${type === 'Owed to Me' ? 'bg-[#18181b] text-white shadow-sm' : 'text-gray-500 hover:text-gray-900'}`} onClick={() => setType('Owed to Me')}>Owed To Me</button>
         </div>
         <div><Label>Party Name</Label><Input value={partyName} onChange={e => setPartyName(e.target.value)} placeholder="e.g. John Doe" required /></div>
         <div><Label>Amount</Label><Input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} required /></div>
-        <div><Label>Due Date</Label><Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} required /></div>
+        <div><Label>Due Date</Label><DatePicker value={dueDate} onChange={setDueDate} /></div>
         <Button type="submit" className="w-full mt-4">Save Debt</Button>
       </form>
     </Modal>

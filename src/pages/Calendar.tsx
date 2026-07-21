@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useData } from '../store/DataContext';
-import { Card, Button, Input, Label, Modal } from '../components/ui';
+import { Card, Button, Input, Label, Modal, DatePicker, TimePicker, Textarea } from '../components/ui';
 import { Client, Meeting } from '../types';
 import { 
   format, 
@@ -12,11 +12,13 @@ import {
   endOfWeek, 
   isSameMonth, 
   isSameDay, 
+  isToday,
+  isBefore,
+  startOfToday,
   addDays, 
   parseISO,
-  isWithinInterval,
-  isBefore,
-  differenceInDays
+  differenceInDays,
+  isAfter
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 
@@ -55,12 +57,12 @@ export default function AppCalendar() {
     let startDate = startOfWeek(currentMonth);
     for (let i = 0; i < 7; i++) {
       days.push(
-        <div className="flex-1 text-center text-xs font-semibold uppercase tracking-wider text-gray-900 py-2" key={i}>
+            <div className="text-center text-[10px] md:text-xs font-semibold uppercase tracking-wider text-gray-900 py-1 md:py-2" key={i}>
           {format(addDays(startDate, i), dateFormat)}
         </div>
       );
     }
-    return <div className="flex">{days}</div>;
+    return <div className="grid grid-cols-7">{days}</div>;
   };
 
   const renderCells = () => {
@@ -68,6 +70,7 @@ export default function AppCalendar() {
     const monthEnd = endOfMonth(monthStart);
     const startDate = startOfWeek(monthStart);
     const endDate = endOfWeek(monthEnd);
+    const today = startOfToday();
 
     const dateFormat = "d";
     const rows = [];
@@ -80,35 +83,42 @@ export default function AppCalendar() {
         formattedDate = format(day, dateFormat);
         const cloneDay = day;
 
-        // Get Meetings for this day
         const dayMeetings = meetings.filter(m => isSameDay(parseISO(m.date), cloneDay));
         const hasMeeting = dayMeetings.length > 0;
 
-        // Get Projects active on this day
         const dayProjects = projects.filter(p => {
           const sDate = parseISO(p.startDate);
           const eDate = parseISO(p.deadline);
-          // Only show if it's within start and end, or exactly same day
           return (day >= sDate && day <= eDate) || isSameDay(sDate, day) || isSameDay(eDate, day);
         });
 
+        const isTodayDate = isToday(day);
+        const isPastDate = isBefore(day, today) && !isTodayDate;
+
         days.push(
           <div
-            className={`flex-1 min-h-[100px] border border-gray-200 p-1 flex flex-col cursor-pointer transition-colors
-              ${!isSameMonth(day, monthStart) ? "text-gray-400 bg-white/50" : hasMeeting ? "bg-orange-100 hover:bg-orange-500 text-white border-gray-200" : "hover:bg-gray-100 bg-white"}
+            className={`min-w-0 overflow-hidden min-h-[60px] md:min-h-[100px] border border-gray-200 p-0.5 md:p-1 flex flex-col cursor-pointer transition-colors
+              ${!isSameMonth(day, monthStart) ? "text-gray-300 bg-white/50" : ""}
+              ${isTodayDate ? "bg-orange-50 border-orange-300" : ""}
+              ${isPastDate && isSameMonth(day, monthStart) ? "bg-gray-50" : ""}
+              ${!isTodayDate && !isPastDate && isSameMonth(day, monthStart) ? (hasMeeting ? "bg-orange-100 hover:bg-orange-500 hover:text-white" : "hover:bg-gray-100 bg-white") : ""}
             `}
             key={day.toString()}
             onClick={() => onDateClick(cloneDay)}
           >
-            <span className={`text-xs font-semibold self-end mr-1 ${hasMeeting ? 'text-yellow-500' : ''}`}>
+            <span className={`text-[10px] md:text-xs font-semibold self-end mr-1 
+              ${isTodayDate ? 'bg-orange-500 text-white w-5 h-5 md:w-6 md:h-6 flex items-center justify-center rounded-full' : ''}
+              ${isPastDate && !isTodayDate ? 'text-gray-400' : ''}
+              ${hasMeeting && !isTodayDate && !isPastDate ? 'text-orange-700' : ''}
+            `}>
               {formattedDate}
             </span>
-            <div className="flex-1 overflow-y-auto no-scrollbar mt-1 space-y-1 hide-scrollbar">
+            <div className="flex-1 overflow-y-auto no-scrollbar mt-1 space-y-1 hide-scrollbar min-w-0">
               {dayMeetings.map(m => {
                 const client = clients.find(c => c.id === m.clientId);
                 return (
-                  <div key={m.id} className="text-[10px] bg-orange-500 text-white px-1 py-0.5 rounded border border-gray-200 truncate">
-                    {m.time} - {client?.name || m.title}
+                  <div key={m.id} className={`text-[8px] md:text-[10px] text-white px-0.5 md:px-1 py-0.5 rounded truncate ${isPastDate ? 'bg-gray-400' : 'bg-orange-500'}`}>
+                    <span className="truncate block">{m.time} - {client?.name || m.leadName || m.title}</span>
                   </div>
                 );
               })}
@@ -125,13 +135,12 @@ export default function AppCalendar() {
                 if (isStart) dotColor = "bg-green-500";
                 if (p.status === 'Completed') dotColor = "bg-emerald-500";
 
-                // Only show text if it's the start, end, or a Monday to reduce clutter, or if there's only a few days
                 const showText = isStart || isEnd || day.getDay() === 1 || p.title.length > 0;
 
                 return (
-                  <div key={p.id} className="flex items-center space-x-1 px-1 truncate">
-                    <div className={`w-1.5 h-1.5 rounded-full ${dotColor} shrink-0`} />
-                    {showText && <span className="text-[10px] text-gray-900 truncate">{p.title}</span>}
+                  <div key={p.id} className="flex items-center space-x-1 px-1 truncate min-w-0">
+                    <div className={`w-1 md:w-1.5 h-1 md:h-1.5 rounded-full ${dotColor} shrink-0`} />
+                  {showText && <span className="text-[8px] md:text-[10px] text-gray-900 truncate">{p.title}</span>}
                   </div>
                 );
               })}
@@ -141,7 +150,7 @@ export default function AppCalendar() {
         day = addDays(day, 1);
       }
       rows.push(
-        <div className="flex" key={day.toString()}>
+        <div className="grid grid-cols-7" key={day.toString()}>
           {days}
         </div>
       );
@@ -178,22 +187,46 @@ interface MeetingModalProps {
 function MeetingModal({ isOpen, onClose, onSave, clients, initialDate }: MeetingModalProps) {
   const [title, setTitle] = useState('');
   const [clientId, setClientId] = useState('');
-  const [date, setDate] = useState(initialDate ? format(initialDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'));
+  const [leadName, setLeadName] = useState('');
+  const [date, setDate] = useState<Date>(initialDate || new Date());
   const [time, setTime] = useState('10:00');
+  const [reason, setReason] = useState('');
+  const [error, setError] = useState('');
 
-  // Update date when initialDate changes
   React.useEffect(() => {
-    if (initialDate) setDate(format(initialDate, 'yyyy-MM-dd'));
+    if (initialDate) setDate(initialDate);
   }, [initialDate]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title && !clientId) return;
-    onSave({ 
-      title: title || (clients.find((c:any) => c.id === clientId)?.name + ' Meeting'), 
-      clientId, 
-      date, 
-      time 
+    setError('');
+
+    if (!clientId && !leadName) {
+      setError('Please select a client or enter a lead name.');
+      return;
+    }
+    if (!date) {
+      setError('Please select a date.');
+      return;
+    }
+
+    const today = startOfToday();
+    if (isBefore(date, today)) {
+      setError('Meeting date must be today or in the future.');
+      return;
+    }
+
+    const generatedTitle = title || (clientId
+      ? (clients.find(c => c.id === clientId)?.name + ' Meeting')
+      : (leadName + ' Meeting'));
+
+    onSave({
+      title: generatedTitle,
+      clientId: clientId || undefined,
+      leadName: leadName || undefined,
+      date: format(date, 'yyyy-MM-dd'),
+      time,
+      reason: reason || undefined,
     });
     onClose();
   };
@@ -203,23 +236,32 @@ function MeetingModal({ isOpen, onClose, onSave, clients, initialDate }: Meeting
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <Label>Client</Label>
-          <select 
-            value={clientId} 
-            onChange={e => setClientId(e.target.value)} 
-            className="w-full bg-gray-100 border border-gray-200 rounded-md p-2 text-sm text-gray-900 focus:outline-none focus:border-white/30 transition-colors"
+          <select
+            value={clientId}
+            onChange={e => { setClientId(e.target.value); if (e.target.value) setLeadName(''); }}
+            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all appearance-none cursor-pointer"
           >
-            <option value="">Select Client (Optional)</option>
-            {clients.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            <option value="">Select Client</option>
+            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
+        <div className="text-center text-xs text-gray-400">— or —</div>
         <div>
-          <Label>Meeting Title</Label>
-          <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Sync Call" />
+          <Label>Lead Name</Label>
+          <Input
+            value={leadName}
+            onChange={e => { setLeadName(e.target.value); if (e.target.value) setClientId(''); }}
+            placeholder="e.g. John Doe"
+          />
         </div>
+        <div><Label>Meeting Title (Optional)</Label><Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Auto-generated if empty" /></div>
         <div className="grid grid-cols-2 gap-4">
-          <div><Label>Date</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} required /></div>
-          <div><Label>Time</Label><Input type="time" value={time} onChange={e => setTime(e.target.value)} required /></div>
+          <div><Label>Date</Label><DatePicker value={date} onChange={setDate} /></div>
+          <div><Label>Time</Label><TimePicker value={time} onChange={setTime} /></div>
         </div>
+        <div><Label>Reason (Optional)</Label><Textarea value={reason} onChange={e => setReason(e.target.value)} placeholder="Purpose of the meeting..." /></div>
+        
+        {error && <div className="text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg">{error}</div>}
         
         <Button type="submit" className="w-full mt-4">Save Meeting</Button>
       </form>

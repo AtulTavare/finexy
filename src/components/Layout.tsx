@@ -65,7 +65,7 @@ export function Layout() {
   const initials = user?.email?.charAt(0).toUpperCase() || 'U';
 
   return (
-    <div className="flex h-[100dvh] w-full bg-[#f4f5f7] text-gray-900 font-sans p-0 sm:p-4">
+    <div className="flex h-[100dvh] w-full bg-[#f4f5f7] text-gray-900 font-sans p-3 sm:p-4">
       <div className="flex flex-1 rounded-none sm:rounded-[32px] bg-[#f9fafc] border border-white shadow-sm overflow-hidden relative">
         {/* Desktop Sidebar */}
         <aside className="hidden md:flex flex-col py-8 w-20 items-center bg-white border-r border-gray-100 z-10 shrink-0">
@@ -133,7 +133,7 @@ export function Layout() {
             </div>
           </header>
 
-          <div className="flex-1 overflow-y-auto no-scrollbar p-4 pb-20 md:p-8 md:pt-4">
+          <div className="flex-1 overflow-y-auto no-scrollbar px-3 pb-20 pt-3 md:p-8 md:pt-4">
             <Outlet />
           </div>
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useData } from '../store/DataContext';
-import { Card, Button, Input, Select, Label, Modal, Badge } from '../components/ui';
+import { Card, Button, Input, Select, Label, Modal, Badge, DatePicker } from '../components/ui';
 import { Brand, Task } from '../types';
 import { format, isToday, isThisWeek, isBefore, startOfToday } from 'date-fns';
 import { Trash2, CheckCircle, Circle } from 'lucide-react';
@@ -121,7 +121,7 @@ function TaskItem({ task, onToggle, onDelete }: { task: Task, onToggle: () => vo
           <h4 className={`text-sm font-medium ${task.isCompleted ? 'line-through text-gray-900' : 'text-gray-900'}`}>{task.title}</h4>
           <div className="flex items-center space-x-2 shrink-0 ml-2">
             {task.priority === 'High' && <span className="w-2 h-2 rounded-full bg-red-500" title="High Priority" />}
-            {task.brand && <Badge className="hidden md:inline-flex">{task.brand}</Badge>}
+            {task.brand && <Badge className="inline-flex">{task.brand}</Badge>}
           </div>
         </div>
         <div className="flex flex-wrap items-center mt-1 text-[10px] text-gray-900 uppercase gap-2">
@@ -138,7 +138,7 @@ function TaskItem({ task, onToggle, onDelete }: { task: Task, onToggle: () => vo
           )}
         </div>
       </div>
-      <button onClick={onDelete} className="text-gray-900 hover:text-red-500 p-1 md:opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+      <button onClick={onDelete} className="text-gray-900 hover:text-red-500 p-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
         <Trash2 size={14} />
       </button>
     </div>
@@ -150,14 +150,14 @@ function TaskModal({ isOpen, onClose, onSave }: any) {
   const [type, setType] = useState<Task['type']>('Personal');
   const [brand, setBrand] = useState<Brand | ''>('');
   const [priority, setPriority] = useState<Task['priority']>('Medium');
-  const [dueDate, setDueDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [dueDate, setDueDate] = useState(new Date());
   const [recurrence, setRecurrence] = useState<Task['recurrence']>('None');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !dueDate) return;
-    onSave({ 
-      title, type, priority, dueDate, recurrence, 
+    onSave({
+      title, type, priority, dueDate: format(dueDate, 'yyyy-MM-dd'), recurrence,
       brand: brand || undefined,
       isCompleted: false
     });
@@ -196,7 +196,7 @@ function TaskModal({ isOpen, onClose, onSave }: any) {
           </Select>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <div><Label>Due Date</Label><Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} required /></div>
+          <div><Label>Due Date</Label><DatePicker value={dueDate} onChange={setDueDate} /></div>
           <div>
             <Label>Recurrence</Label>
             <Select value={recurrence} onChange={e => setRecurrence(e.target.value as any)}>

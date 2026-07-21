@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../store/DataContext';
-import { Card, Button, Input, Label, Modal, Badge } from '../components/ui';
+import { Card, Button, Input, Label, Modal, Badge, DatePicker } from '../components/ui';
 import { formatCurrency } from '../lib/utils';
 import { format, subMonths, isAfter, startOfMonth, isBefore, addDays, startOfToday, startOfWeek, subWeeks, subDays, startOfDay } from 'date-fns';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
@@ -112,17 +112,17 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">Command Center</h1>
           <p className="text-sm text-gray-500 mt-1">Unified view of your empire.</p>
         </div>
-        <div className="flex flex-wrap gap-2 w-full lg:w-auto">
-          <Button onClick={() => triggerEvent('open-income-modal', '/personal')} className="bg-white border-gray-200 hover:bg-gray-50 text-xs py-1.5 px-3 flex-1 lg:flex-none text-gray-900 shadow-sm"><ArrowUpRight size={14} className="mr-1 inline" /> Income</Button>
-          <Button onClick={() => triggerEvent('open-expense-modal', '/personal')} className="bg-white border-gray-200 hover:bg-gray-50 text-xs py-1.5 px-3 flex-1 lg:flex-none text-gray-900 shadow-sm"><ArrowDownRight size={14} className="mr-1 inline" /> Expense</Button>
-          <Button onClick={() => triggerEvent('open-lead-modal', '/business')} className="bg-white border-gray-200 hover:bg-gray-50 text-xs py-1.5 px-3 flex-1 lg:flex-none text-gray-900 shadow-sm"><Briefcase size={14} className="mr-1 inline" /> Lead</Button>
-          <Button onClick={() => triggerEvent('open-task-modal', '/tasks')} className="bg-white border-gray-200 hover:bg-gray-50 text-xs py-1.5 px-3 flex-1 lg:flex-none text-gray-900 shadow-sm"><PlusCircle size={14} className="mr-1 inline" /> Task</Button>
-          <Button onClick={() => setShowDrawModal(true)} className="text-xs py-1.5 px-3 w-full sm:w-auto mt-2 sm:mt-0 shadow-sm">Owner Draw</Button>
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 w-full lg:w-auto">
+          <Button onClick={() => triggerEvent('open-income-modal', '/personal')} className="bg-white border-gray-200 hover:bg-gray-50 text-xs text-gray-900 shadow-sm"><ArrowUpRight size={14} className="mr-1 inline" /> Income</Button>
+          <Button onClick={() => triggerEvent('open-expense-modal', '/personal')} className="bg-white border-gray-200 hover:bg-gray-50 text-xs text-gray-900 shadow-sm"><ArrowDownRight size={14} className="mr-1 inline" /> Expense</Button>
+          <Button onClick={() => triggerEvent('open-lead-modal', '/business')} className="bg-white border-gray-200 hover:bg-gray-50 text-xs text-gray-900 shadow-sm"><Briefcase size={14} className="mr-1 inline" /> Lead</Button>
+          <Button onClick={() => triggerEvent('open-task-modal', '/tasks')} className="bg-white border-gray-200 hover:bg-gray-50 text-xs text-gray-900 shadow-sm"><PlusCircle size={14} className="mr-1 inline" /> Task</Button>
+          <Button onClick={() => setShowDrawModal(true)} className="col-span-2 sm:col-auto text-xs shadow-sm">Owner Draw</Button>
         </div>
       </div>
 
-      <div className="flex items-center space-x-2 border-b border-gray-200 pb-4">
-        <span className="text-xs font-semibold  text-gray-900 mr-2">Filter:</span>
+      <div className="flex items-center flex-wrap gap-2 border-b border-gray-200 pb-4">
+        <span className="text-xs font-semibold text-gray-900 mr-1">Filter:</span>
         {(['Daily', 'Weekly', 'Monthly'] as const).map(t => (
           <button 
             key={t}
@@ -143,9 +143,9 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <Card className="p-6 bg-white">
-            <h2 className="text-sm font-semibold  text-gray-900 mb-6">Cash Flow Over Time</h2>
-            <div className="h-64 w-full">
+          <Card className="p-4 md:p-6 bg-white">
+            <h2 className="text-sm font-semibold text-gray-900 mb-4 md:mb-6">Cash Flow Over Time</h2>
+            <div className="h-48 md:h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={trendData}>
                   <XAxis dataKey="name" stroke="transparent" fontSize={10} tickLine={false} axisLine={false} fontWeight="bold" />
@@ -159,9 +159,9 @@ export default function Dashboard() {
           </Card>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="p-6 bg-white">
-              <h2 className="text-sm font-semibold  text-gray-900 mb-6">Expenses by Category</h2>
-              <div className="h-48 w-full flex items-center justify-center relative">
+            <Card className="p-4 md:p-6 bg-white">
+              <h2 className="text-sm font-semibold text-gray-900 mb-4 md:mb-6">Expenses by Category</h2>
+              <div className="h-40 md:h-48 w-full flex items-center justify-center relative">
                 {expenseCategories.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -191,14 +191,14 @@ export default function Dashboard() {
 
             <div className="grid grid-cols-2 gap-4">
               <Card className="p-4 flex flex-col justify-center">
-                <div className="text-xs uppercase text-gray-900 font-semibold mb-1 tracking-widest">Pipeline Value</div>
-                <div className="text-2xl tabular font-semibold">{formatCurrency(pipelineValue)}</div>
-                <div className="text-xs text-gray-800 mt-1 font-semibold">{convRate}% Conv. Rate</div>
+                <div className="text-[10px] md:text-xs uppercase text-gray-900 font-semibold mb-1 tracking-widest">Pipeline Value</div>
+                <div className="text-lg md:text-2xl tabular font-semibold">{formatCurrency(pipelineValue)}</div>
+                <div className="text-[10px] md:text-xs text-gray-800 mt-1 font-semibold">{convRate}% Conv. Rate</div>
               </Card>
               <Card className="p-4 flex flex-col justify-center">
-                <div className="text-xs uppercase text-gray-900 font-semibold mb-1 tracking-widest">Active MRR</div>
-                <div className="text-2xl tabular text-green-700 font-semibold">{formatCurrency(mrr)}</div>
-                <div className="text-xs text-gray-800 mt-1 font-semibold">From Retainers</div>
+                <div className="text-[10px] md:text-xs uppercase text-gray-900 font-semibold mb-1 tracking-widest">Active MRR</div>
+                <div className="text-lg md:text-2xl tabular text-green-700 font-semibold">{formatCurrency(mrr)}</div>
+                <div className="text-[10px] md:text-xs text-gray-800 mt-1 font-semibold">From Retainers</div>
               </Card>
               <Card className="p-4 col-span-2 flex flex-col justify-center">
                 <div className="text-xs uppercase text-gray-900 font-semibold mb-1 tracking-widest">Business Cash</div>
@@ -209,7 +209,7 @@ export default function Dashboard() {
         </div>
 
         <div className="space-y-6">
-          <Card className="p-0 flex flex-col h-[500px] bg-white">
+          <Card className="p-0 flex flex-col max-h-[300px] md:max-h-[500px] bg-white">
             <div className="p-4 border-b border-gray-100 bg-white flex justify-between items-center rounded-t-lg">
               <h2 className="text-sm font-semibold  text-gray-900">Needs Attention</h2>
               <Badge variant="danger">{attentionItems.length}</Badge>
@@ -247,9 +247,9 @@ function MetricCard({ title, value, isPositive, isDebt }: { title: string, value
   const valColor = title === "Net Position" ? "text-white" : isPositive === true ? "text-white" : color;
   
   return (
-    <Card className={`p-6 flex flex-col justify-center ${bgColor}`}>
-      <div className={`text-sm font-medium mb-2 ${labelColor}`}>{title}</div>
-      <div className={`text-3xl tabular font-semibold ${valColor}`}>
+    <Card className={`p-4 md:p-6 flex flex-col justify-center ${bgColor}`}>
+      <div className={`text-xs md:text-sm font-medium mb-1 md:mb-2 ${labelColor}`}>{title}</div>
+      <div className={`text-xl md:text-3xl tabular font-semibold ${valColor}`}>
         {formatCurrency(value)}
       </div>
     </Card>
@@ -265,12 +265,12 @@ interface DrawModalProps {
 
 function DrawModal({ isOpen, onClose, onSave, maxAmount }: DrawModalProps) {
   const [amount, setAmount] = useState('');
-  const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [date, setDate] = useState(new Date());
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount) return;
-    onSave(parseFloat(amount), date);
+    onSave(parseFloat(amount), format(date, 'yyyy-MM-dd'));
     setAmount('');
     onClose();
   };
@@ -280,7 +280,7 @@ function DrawModal({ isOpen, onClose, onSave, maxAmount }: DrawModalProps) {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="text-xs text-gray-900">Move cash from Business to Personal. Available Business Cash: <strong className="text-gray-900 tabular">{formatCurrency(maxAmount)}</strong></div>
         <div><Label>Amount</Label><Input type="number" step="0.01" max={maxAmount} value={amount} onChange={e => setAmount(e.target.value)} required /></div>
-        <div><Label>Date</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} required /></div>
+        <div><Label>Date</Label><DatePicker value={date} onChange={setDate} /></div>
         <Button type="submit" className="w-full mt-4">Process Draw</Button>
       </form>
     </Modal>

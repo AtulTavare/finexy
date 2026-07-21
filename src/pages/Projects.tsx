@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useData } from '../store/DataContext';
-import { Card, Button, Input, Label, Modal, Badge } from '../components/ui';
+import { Card, Button, Input, Label, Modal, Badge, DatePicker } from '../components/ui';
 import { Client, Project } from '../types';
 import { format } from 'date-fns';
 
@@ -43,7 +43,7 @@ export default function Projects() {
                 <Card key={p.id} className="p-4 flex flex-col bg-white">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-semibold text-lg">{p.title}</h3>
-                    <button onClick={() => { deleteProject(p.id) }} className="text-gray-900 hover:text-red-500 text-xs">Delete</button>
+                    <button onClick={() => { deleteProject(p.id) }} className="text-gray-900 hover:text-red-500 text-xs px-2 py-1">Delete</button>
                   </div>
                   <div className="text-sm text-gray-900 mb-4">{client?.name || 'Unknown Client'}</div>
                   
@@ -102,8 +102,8 @@ function ProjectModal({ isOpen, onClose, onSave, clients }: ProjectModalProps) {
   const [title, setTitle] = useState('');
   const [clientId, setClientId] = useState('');
   const [services, setServices] = useState<string[]>([]);
-  const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [deadline, setDeadline] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [startDate, setStartDate] = useState(new Date());
+  const [deadline, setDeadline] = useState(new Date());
   const [status, setStatus] = useState<'Not Started' | 'In Progress' | 'Under Review' | 'Completed'>('Not Started');
 
   const toggleService = (s: string) => {
@@ -113,7 +113,7 @@ function ProjectModal({ isOpen, onClose, onSave, clients }: ProjectModalProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !clientId) return;
-    onSave({ title, clientId, services, startDate, deadline, status });
+    onSave({ title, clientId, services, startDate: format(startDate, 'yyyy-MM-dd'), deadline: format(deadline, 'yyyy-MM-dd'), status });
     onClose();
   };
 
@@ -127,15 +127,15 @@ function ProjectModal({ isOpen, onClose, onSave, clients }: ProjectModalProps) {
             value={clientId} 
             onChange={e => setClientId(e.target.value)} 
             required
-            className="w-full bg-gray-100 border border-gray-200 rounded-md p-2 text-sm text-gray-900 focus:outline-none focus:border-white/30 transition-colors"
+            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all appearance-none cursor-pointer"
           >
             <option value="">Select Client...</option>
             {clients.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <div><Label>Start Date</Label><Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required /></div>
-          <div><Label>Deadline</Label><Input type="date" value={deadline} onChange={e => setDeadline(e.target.value)} required /></div>
+          <div><Label>Start Date</Label><DatePicker value={startDate} onChange={setStartDate} /></div>
+          <div><Label>Deadline</Label><DatePicker value={deadline} onChange={setDeadline} /></div>
         </div>
         <div>
           <Label>Status</Label>
