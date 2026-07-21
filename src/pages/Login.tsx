@@ -63,7 +63,7 @@ export default function Login() {
         <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent" />
         <div className="absolute bottom-12 left-12 text-white">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-[#f97316] text-white flex items-center justify-center font-bold text-2xl">F</div>
+            <img src="/logo.png" alt="ShubhStack" className="w-12 h-12 rounded-xl" />
             <span className="text-2xl font-bold">ShubhStack</span>
           </div>
           <p className="text-lg text-white/80 max-w-md">
@@ -84,7 +84,7 @@ export default function Login() {
       <div className="flex-1 flex items-center justify-center p-4 md:p-8 bg-white">
         <div className="w-full max-w-sm">
           <div className="md:hidden flex items-center space-x-3 mb-10">
-            <div className="w-10 h-10 rounded-xl bg-[#f97316] text-white flex items-center justify-center font-bold text-xl">F</div>
+            <img src="/logo.png" alt="ShubhStack" className="w-10 h-10 rounded-xl" />
             <span className="text-xl font-bold">ShubhStack</span>
           </div>
 

@@ -69,9 +69,7 @@ export function Layout() {
       <div className="flex flex-1 rounded-none sm:rounded-[32px] bg-[#f9fafc] border border-white shadow-sm overflow-hidden relative">
         {/* Desktop Sidebar */}
         <aside className="hidden md:flex flex-col py-8 w-20 items-center bg-white border-r border-gray-100 z-10 shrink-0">
-          <div className="mb-10 w-10 h-10 rounded-xl bg-[#f97316] text-white flex items-center justify-center font-bold text-xl">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
-          </div>
+          <img src="/logo.png" alt="ShubhStack" className="mb-10 w-10 h-10 rounded-xl" />
           <nav className="flex flex-col space-y-4 w-full px-4">
             {NAV_ITEMS.map((item) => {
               const isActive = location.pathname === item.path;
