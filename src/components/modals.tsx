@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Modal, Button, Input, Select, Label, DatePicker } from './ui';
-import { Brand, Client, Engagement, BusinessPayment, BusinessExpense, Project, ServicePricing } from '../types';
+import { Brand, Client, BusinessPayment, BusinessExpense, Project, ServicePricing } from '../types';
 import { format } from 'date-fns';
-import { formatCurrency } from '../lib/utils';
 
 const SERVICES_OFFERED = [
   'Website Development',
@@ -21,23 +20,21 @@ const BRANDS: (Brand | 'All')[] = ['All', 'Infinity Innovations'];
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSaveIncoming: (item: Omit<BusinessPayment, 'id' | 'createdAt'> & { engagementId?: string }) => void;
+  onSaveIncoming: (item: Omit<BusinessPayment, 'id' | 'createdAt'>) => void;
   onUpdateIncoming?: (id: string, updates: Partial<BusinessPayment>) => void;
   onSaveOutgoing: (item: Omit<BusinessExpense, 'id' | 'createdAt'>) => void;
   onUpdateOutgoing?: (id: string, updates: Partial<BusinessExpense>) => void;
   clients: Client[];
-  engagements: Engagement[];
   payments: BusinessPayment[];
   projects?: Project[];
   editItem?: BusinessPayment | null;
 }
 
-export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSaveOutgoing, onUpdateOutgoing, clients, engagements, payments, projects, editItem }: PaymentModalProps) {
+export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSaveOutgoing, onUpdateOutgoing, clients, payments, projects, editItem }: PaymentModalProps) {
   const [type, setType] = useState<'incoming' | 'outgoing'>('incoming');
 
   const [projectId, setProjectId] = useState('');
-  const [clientId, setClientId] = useState('');
-  const [selectedEngagementId, setSelectedEngagementId] = useState<string>('');
+  const [serviceName, setServiceName] = useState('');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date());
   const [invoiceReference, setInvoiceReference] = useState('');
@@ -45,48 +42,27 @@ export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming
   const [brand, setBrand] = useState<Brand>('Infinity Innovations');
   const [category, setCategory] = useState<BusinessExpense['category']>('Tools');
 
-  const validEngagements = useMemo(
-    () => engagements.filter((e: any) => e.clientId === clientId && e.projectId === projectId && e.status === 'Active' && e.serviceName),
-    [engagements, clientId, projectId]
-  );
-  const currentEngagement = validEngagements.find((e: any) => e.id === selectedEngagementId) || validEngagements[0];
-  const amountNum = parseFloat(amount) || 0;
-  const collected = currentEngagement
-    ? payments.filter((p: any) => p.engagementId === currentEngagement.id).reduce((s: number, p: any) => s + p.amount, 0)
-    : 0;
-  const projectedCollected = collected + amountNum;
-  const progress = currentEngagement ? Math.min(collected / currentEngagement.value, 1) : 0;
-  const projectedProgress = currentEngagement ? Math.min(projectedCollected / currentEngagement.value, 1) : 0;
-
-  const projectClientIds = useMemo(() => {
-    const ids = new Set(engagements.filter((e: any) => e.projectId === projectId).map((e: any) => e.clientId));
-    return ids;
-  }, [engagements, projectId]);
+  const selectedProject = useMemo(() => (projects || []).find((p: any) => p.id === projectId), [projects, projectId]);
+  const projectServices = useMemo(() => selectedProject?.servicePricing || [], [selectedProject]);
+  const clientId = selectedProject?.clientId || '';
 
   useEffect(() => {
     if (editItem) {
       setType('incoming');
-      const payEngagement = engagements.find((e: any) => e.id === editItem.engagementId);
-      setProjectId(payEngagement?.projectId || '');
-      setClientId(editItem.clientId);
-      setSelectedEngagementId(editItem.engagementId || '');
+      setProjectId(editItem.projectId);
+      setServiceName(editItem.serviceName);
       setAmount(editItem.amount.toString());
       setDate(new Date(editItem.date));
       setInvoiceReference(editItem.invoiceReference);
     } else {
       setType('incoming');
-      setProjectId(''); setClientId(''); setSelectedEngagementId(''); setAmount(''); setDate(new Date()); setInvoiceReference(''); setBrand('Infinity Innovations'); setCategory('Tools');
+      setProjectId(''); setServiceName(''); setAmount(''); setDate(new Date()); setInvoiceReference(''); setBrand('Infinity Innovations'); setCategory('Tools');
     }
-  }, [editItem, isOpen, engagements]);
+  }, [editItem, isOpen]);
 
   useEffect(() => {
-    setClientId('');
-    setSelectedEngagementId('');
+    setServiceName('');
   }, [projectId]);
-
-  useEffect(() => {
-    setSelectedEngagementId('');
-  }, [clientId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,12 +70,11 @@ export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming
     
     if (type === 'incoming') {
       if (editItem && onUpdateIncoming) {
-        onUpdateIncoming(editItem.id, { clientId, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd'), invoiceReference });
+        onUpdateIncoming(editItem.id, { projectId, serviceName, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd'), invoiceReference });
       } else {
-        if (!clientId || !projectId) return;
+        if (!projectId || !serviceName) return;
         const client = clients.find((c: any) => c.id === clientId);
-        const finalEngagementId = selectedEngagementId || (validEngagements.length === 1 ? validEngagements[0].id : undefined);
-        onSaveIncoming({ clientId, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd'), invoiceReference, brand: client?.brand || 'Infinity Innovations', engagementId: finalEngagementId });
+        onSaveIncoming({ clientId, projectId, serviceName, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd'), invoiceReference, brand: client?.brand || 'Infinity Innovations' });
       }
     } else {
       onSaveOutgoing({ brand, category, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd') });
@@ -140,47 +115,13 @@ export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming
             </div>
             {projectId && (
               <div>
-                <Label>Client</Label>
-                <Select value={clientId} onChange={e => setClientId(e.target.value)} required>
-                  <option value="">Select a client...</option>
-                  {clients.filter((c: any) => projectClientIds.has(c.id)).map((c: any) => <option key={c.id} value={c.id}>{c.name} ({c.brand})</option>)}
+                <Label>Service</Label>
+                <Select value={serviceName} onChange={e => setServiceName(e.target.value)} required>
+                  <option value="">Select a service...</option>
+                  {projectServices.map((s: any) => <option key={s.name} value={s.name}>{s.name} — {s.billing === 'monthly' ? `₹${s.price.toLocaleString('en-IN')}/mo` : `₹${s.price.toLocaleString('en-IN')}`}</option>)}
                 </Select>
               </div>
             )}
-            {clientId && validEngagements.length > 0 ? (
-              <div className="bg-gray-50 rounded-xl p-3 space-y-2">
-                {validEngagements.length > 1 && (
-                  <div className="flex gap-2">
-                    {validEngagements.map((e: any) => (
-                      <button
-                        key={e.id}
-                        type="button"
-                        className={`flex-1 px-3 py-1.5 text-[10px] font-semibold rounded-lg transition-all ${selectedEngagementId === e.id || (!selectedEngagementId && validEngagements[0].id === e.id) ? 'bg-[#18181b] text-white shadow-sm' : 'bg-white text-gray-500 border border-gray-200'}`}
-                        onClick={() => setSelectedEngagementId(e.id)}
-                      >
-                        {e.serviceName}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                <div className="flex justify-between text-xs">
-                  {amountNum > 0 ? (
-                    <span className="text-gray-500">{formatCurrency(collected)} + <span className="text-orange-500 font-medium">{formatCurrency(amountNum)}</span> → {formatCurrency(projectedCollected)} of {formatCurrency(currentEngagement?.value || 0)}</span>
-                  ) : (
-                    <span className="text-gray-500">{formatCurrency(collected)} collected of {formatCurrency(currentEngagement?.value || 0)}</span>
-                  )}
-                  <span className="font-semibold text-gray-800">{Math.round(projectedProgress * 100)}%</span>
-                </div>
-                <div className="w-full bg-orange-300/50 rounded-full h-2 overflow-hidden flex">
-                  <div className="bg-emerald-500 h-2 transition-all" style={{ width: `${progress * 100}%` }} />
-                  {amountNum > 0 && projectedProgress > progress && (
-                    <div className="bg-orange-500 h-2 transition-all" style={{ width: `${(projectedProgress - progress) * 100}%` }} />
-                  )}
-                </div>
-              </div>
-            ) : clientId ? (
-              <div className="text-xs text-gray-400 italic">No active engagement — unlinked payment</div>
-            ) : null}
             <div><Label>Amount</Label><Input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} required /></div>
             <div><Label>Date</Label><DatePicker value={date} onChange={setDate} /></div>
             <div><Label>Invoice Reference</Label><Input value={invoiceReference} onChange={e => setInvoiceReference(e.target.value)} /></div>
@@ -210,7 +151,7 @@ export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming
             <div><Label>Date</Label><DatePicker value={date} onChange={setDate} /></div>
           </>
         )}
-        <Button type="submit" className="w-full mt-4" disabled={type === 'incoming' && (!projectId || !clientId) && !editItem}>{editItem ? 'Update Payment' : `Save ${type === 'incoming' ? 'Payment' : 'Expense'}`}</Button>
+        <Button type="submit" className="w-full mt-4" disabled={type === 'incoming' && (!projectId || !serviceName) && !editItem}>{editItem ? 'Update Payment' : `Save ${type === 'incoming' ? 'Payment' : 'Expense'}`}</Button>
       </form>
     </Modal>
   );

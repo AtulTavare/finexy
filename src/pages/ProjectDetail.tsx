@@ -12,7 +12,7 @@ export default function ProjectDetail() {
   const navigate = useNavigate();
   const {
     projects, addProject, updateProject, deleteProject,
-    clients, engagements, businessPayments,
+    clients, businessPayments,
     addBusinessPayment, updateBusinessPayment, deleteBusinessPayment,
     businessExpenses, addBusinessExpense, updateBusinessExpense, deleteBusinessExpense
   } = useData();
@@ -33,14 +33,12 @@ export default function ProjectDetail() {
     );
   }
 
-  const projectEngs = engagements.filter(e => e.projectId === project.id && e.status === 'Active');
   const totalBudget = project.servicePricing.reduce((sum, s) => sum + s.price, 0);
-  const totalPaid = projectEngs.reduce((sum, eng) => sum + businessPayments.filter(p => p.engagementId === eng.id).reduce((s, p) => s + p.amount, 0), 0);
+  const totalPaid = businessPayments.filter(p => p.projectId === project.id).reduce((s, p) => s + p.amount, 0);
   const remaining = Math.max(0, totalBudget - totalPaid);
   const pct = totalBudget > 0 ? Math.min(totalPaid / totalBudget, 1) : 0;
 
-  const projectPaymentIds = projectEngs.map(e => e.id);
-  const projectPayments = businessPayments.filter(p => projectPaymentIds.includes(p.engagementId));
+  const projectPayments = businessPayments.filter(p => p.projectId === project.id);
 
   const handleDelete = () => {
     deleteProject(project.id);
@@ -104,8 +102,7 @@ export default function ProjectDetail() {
         <h2 className="text-sm font-semibold text-gray-900 mb-4">Services</h2>
         <div className="space-y-4">
           {project.servicePricing.map(svc => {
-            const engs = projectEngs.filter(e => e.serviceName === svc.name);
-            const paid = engs.reduce((sum, eng) => sum + businessPayments.filter(p => p.engagementId === eng.id).reduce((s, p) => s + p.amount, 0), 0);
+            const paid = businessPayments.filter(p => p.projectId === project.id && p.serviceName === svc.name).reduce((sum, p) => sum + p.amount, 0);
             const sPct = svc.price > 0 ? Math.min(paid / svc.price, 1) : 0;
             const started = new Date(svc.startDate) <= new Date();
             return (
@@ -140,31 +137,6 @@ export default function ProjectDetail() {
         </div>
       </Card>
 
-      {(() => {
-        const unlinked = businessPayments.filter(p => !p.engagementId && p.clientId === project.clientId);
-        if (unlinked.length === 0) return null;
-        const unlinkedTotal = unlinked.reduce((s, p) => s + p.amount, 0);
-        return (
-          <Card className="p-4 md:p-6 border border-dashed border-orange-300 bg-orange-50/40">
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="text-sm font-semibold text-orange-700">Unlinked Payments</h2>
-              <span className="text-sm font-bold text-orange-700">{formatCurrency(unlinkedTotal)}</span>
-            </div>
-            <p className="text-[11px] text-orange-500 italic mb-3">
-              These payments were logged without linking to a specific service. Edit them in Business → Payments to assign a service.
-            </p>
-            <div className="space-y-1">
-              {unlinked.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(p => (
-                <div key={p.id} className="flex justify-between text-xs text-orange-600">
-                  <span>{format(new Date(p.date), 'MMM d')} — {p.invoiceReference || 'No ref'}</span>
-                  <span className="tabular font-medium">{formatCurrency(p.amount)}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
-        );
-      })()}
-
       <Card className="p-0">
         <div className="flex justify-between items-center p-4 md:p-6 border-b border-gray-100">
           <h2 className="text-sm font-semibold text-gray-900">Payment History</h2>
@@ -187,12 +159,11 @@ export default function ProjectDetail() {
             </thead>
             <tbody>
               {projectPayments.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(p => {
-                const eng = engagements.find(e => e.id === p.engagementId);
                 return (
                   <tr key={p.id} className="border-b border-gray-200 hover:bg-gray-50">
                     <td className="p-4 md:p-6 text-gray-900">{format(new Date(p.date), 'MMM d, yyyy')}</td>
                     <td className="p-4 md:p-6">
-                      <span className="text-gray-900">{eng?.serviceName || '—'}</span>
+                      <span className="text-gray-900">{p.serviceName}</span>
                     </td>
                     <td className="p-4 md:p-6 text-gray-500 hidden sm:table-cell">{p.invoiceReference || '—'}</td>
                     <td className="p-4 md:p-6 text-right tabular text-emerald-500 font-semibold">+{formatCurrency(p.amount)}</td>
@@ -226,7 +197,6 @@ export default function ProjectDetail() {
         onSaveOutgoing={addBusinessExpense}
         onUpdateOutgoing={updateBusinessExpense}
         clients={client ? [client] : clients}
-        engagements={engagements}
         payments={businessPayments}
         projects={projects}
       />
@@ -234,7 +204,7 @@ export default function ProjectDetail() {
       <ConfirmDialog
         isOpen={!!deleteTarget}
         title="Delete Project"
-        message={`Are you sure you want to delete "${deleteTarget?.name}"? This will also mark its linked engagements as completed.`}
+        message={`Are you sure you want to delete "${deleteTarget?.name}"? Linked payments will also be deleted.`}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
       />

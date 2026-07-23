@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import {
   PulseData, PersonalIncome, PersonalExpense, PersonalDebt,
-  Lead, Client, Engagement, BusinessPayment, BusinessExpense,
+  Lead, Client, BusinessPayment, BusinessExpense,
   Task, Project, Meeting,
 } from '../types';
 import { generateId, toCamelCase, toSnakeCase } from '../lib/utils';
@@ -32,10 +32,7 @@ interface DataContextType extends PulseData {
   addClient: (item: Omit<Client, 'id' | 'createdAt'>) => void;
   updateClient: (id: string, updates: Partial<Client>) => void;
   deleteClient: (id: string) => void;
-  addEngagement: (item: Omit<Engagement, 'id' | 'createdAt'>) => void;
-  updateEngagement: (id: string, updates: Partial<Engagement>) => void;
-  deleteEngagement: (id: string) => void;
-  addBusinessPayment: (item: Omit<BusinessPayment, 'id' | 'createdAt'> & { engagementId?: string }) => void;
+  addBusinessPayment: (item: Omit<BusinessPayment, 'id' | 'createdAt'>) => void;
   updateBusinessPayment: (id: string, updates: Partial<BusinessPayment>) => void;
   deleteBusinessPayment: (id: string) => void;
   addBusinessExpense: (item: Omit<BusinessExpense, 'id' | 'createdAt'>) => void;
@@ -58,7 +55,6 @@ const emptyData: PulseData = {
   personalDebts: [],
   leads: [],
   clients: [],
-  engagements: [],
   businessPayments: [],
   businessExpenses: [],
   tasks: [],
@@ -70,7 +66,7 @@ const DataContext = createContext<DataContextType | null>(null);
 
 type TableName =
   | 'personal_income' | 'personal_expenses' | 'personal_debts'
-  | 'leads' | 'clients' | 'engagements' | 'business_payments'
+  | 'leads' | 'clients' | 'business_payments'
   | 'business_expenses' | 'tasks' | 'projects' | 'meetings';
 
 const TABLE_MAP: Record<keyof PulseData, TableName> = {
@@ -79,7 +75,6 @@ const TABLE_MAP: Record<keyof PulseData, TableName> = {
   personalDebts: 'personal_debts',
   leads: 'leads',
   clients: 'clients',
-  engagements: 'engagements',
   businessPayments: 'business_payments',
   businessExpenses: 'business_expenses',
   tasks: 'tasks',
@@ -385,35 +380,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (!ok && prev) setArray('clients', (prevArr) => [prev, ...prevArr]);
   };
 
-  const addEngagement = async (item: Omit<Engagement, 'id' | 'createdAt'>) => {
-    const newItem: Engagement = { ...item, id: generateId(), createdAt: new Date().toISOString() };
-    setArray('engagements', (prev) => [newItem, ...prev]);
-    const ok = await dbInsert('engagements', newItem);
-    if (!ok) setArray('engagements', (prev) => prev.filter((e) => e.id !== newItem.id));
-  };
-
-  const updateEngagement = async (id: string, updates: Partial<Engagement>) => {
-    const prev = data.engagements.find(e => e.id === id);
-    setArray('engagements', (prevArr) => prevArr.map((e) => (e.id === id ? { ...e, ...updates } : e)));
-    const ok = await dbUpdate('engagements', id, updates);
-    if (!ok && prev) setArray('engagements', (prevArr) => prevArr.map((e) => (e.id === id ? prev : e)));
-  };
-
-  const deleteEngagement = async (id: string) => {
-    const prev = data.engagements.find(e => e.id === id);
-    setArray('engagements', (prevArr) => prevArr.filter((e) => e.id !== id));
-    const ok = await dbDelete('engagements', id);
-    if (!ok && prev) setArray('engagements', (prevArr) => [prev, ...prevArr]);
-  };
-
-  const addBusinessPayment = async (item: Omit<BusinessPayment, 'id' | 'createdAt'> & { engagementId?: string }) => {
-    const resolvedEngagementId = item.engagementId || data.engagements.find(e => e.clientId === item.clientId && e.status === 'Active' && e.serviceName)?.id || null;
-    const newItem: BusinessPayment = {
-      ...item,
-      id: generateId(),
-      createdAt: new Date().toISOString(),
-      engagementId: resolvedEngagementId,
-    };
+  const addBusinessPayment = async (item: Omit<BusinessPayment, 'id' | 'createdAt'>) => {
+    const newItem: BusinessPayment = { ...item, id: generateId(), createdAt: new Date().toISOString() };
     setArray('businessPayments', (prev) => [newItem, ...prev]);
     const ok = await dbInsert('business_payments', newItem);
     if (!ok) setArray('businessPayments', (prev) => prev.filter((p) => p.id !== newItem.id));
@@ -500,111 +468,27 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const newItem: Project = { ...item, id: generateId(), createdAt: new Date().toISOString() };
     setArray('projects', (prev) => [newItem, ...prev]);
     const ok = await dbInsert('projects', newItem);
-    if (!ok) { setArray('projects', (prev) => prev.filter((p) => p.id !== newItem.id)); return; }
-    const client = data.clients.find(c => c.id === item.clientId);
-    for (const svc of item.servicePricing) {
-      const engagement: Engagement = {
-        id: generateId(),
-        clientId: item.clientId,
-        projectId: newItem.id,
-        serviceName: svc.name,
-        brand: client?.brand || 'Infinity Innovations',
-        type: svc.billing === 'one-time' ? 'Project' : 'Retainer',
-        value: svc.price,
-        paymentTerms: svc.billing === 'one-time' ? 'Upfront' : 'Monthly',
-        startDate: svc.startDate,
-        status: 'Active',
-        createdAt: new Date().toISOString(),
-      };
-      setArray('engagements', (prev) => [engagement, ...prev]);
-      await dbInsert('engagements', engagement);
-    }
+    if (!ok) setArray('projects', (prev) => prev.filter((p) => p.id !== newItem.id));
   };
 
   const updateProject = async (id: string, updates: Partial<Project>) => {
     const prev = data.projects.find(p => p.id === id);
     setArray('projects', (prevArr) => prevArr.map((p) => (p.id === id ? { ...p, ...updates } : p)));
     const ok = await dbUpdate('projects', id, updates);
-    if (!ok && prev) { setArray('projects', (prevArr) => prevArr.map((p) => (p.id === id ? prev : p))); return; }
-    if (ok && updates.servicePricing) {
-      const existingEngs = data.engagements.filter(e => e.projectId === id);
-      const clientId = prev?.clientId || '';
-      const client = data.clients.find(c => c.id === clientId);
-      const claimedEngIds = new Set<string>();
-      for (const svc of updates.servicePricing) {
-        let match = existingEngs.find(e => e.serviceName === svc.name);
-        if (!match) {
-          match = data.engagements.find(e =>
-            !e.projectId &&
-            !claimedEngIds.has(e.id) &&
-            e.clientId === clientId &&
-            e.status === 'Active' &&
-            e.value === svc.price &&
-            e.type === (svc.billing === 'one-time' ? 'Project' : 'Retainer')
-          );
-        }
-        if (match) {
-          claimedEngIds.add(match.id);
-          const prevEng = data.engagements.find(e => e.id === match.id);
-          const updatedPaymentTerms = svc.billing === 'one-time' ? 'Upfront' as const : 'Monthly' as const;
-          setArray('engagements', (prevArr) => prevArr.map(e => e.id === match.id ? {
-            ...e, value: svc.price, startDate: svc.startDate,
-            projectId: id, serviceName: svc.name,
-            paymentTerms: updatedPaymentTerms,
-          } : e));
-          const engOk = await dbUpdate('engagements', match.id, {
-            value: svc.price, startDate: svc.startDate,
-            projectId: id, serviceName: svc.name,
-            paymentTerms: svc.billing === 'one-time' ? 'Upfront' : 'Monthly',
-          });
-          if (!engOk && prevEng) setArray('engagements', (prevArr) => prevArr.map(e => (e.id === match.id ? prevEng : e)));
-        } else {
-          const newEng: Engagement = {
-            id: generateId(), clientId, projectId: id, serviceName: svc.name,
-            brand: client?.brand || 'Infinity Innovations',
-            type: svc.billing === 'one-time' ? 'Project' : 'Retainer',
-            value: svc.price, paymentTerms: svc.billing === 'one-time' ? 'Upfront' : 'Monthly',
-            startDate: svc.startDate, status: 'Active', createdAt: new Date().toISOString(),
-          };
-          setArray('engagements', (prev) => [newEng, ...prev]);
-          await dbInsert('engagements', newEng);
-        }
-      }
-      const currentNames = new Set(updates.servicePricing.map(s => s.name));
-      const allProjectEngs = data.engagements.filter(e =>
-        e.projectId === id ||
-        (!e.projectId && e.clientId === clientId && e.status === 'Active')
-      );
-      for (const eng of allProjectEngs) {
-        if (eng.serviceName && !currentNames.has(eng.serviceName) && !claimedEngIds.has(eng.id)) {
-          const prevEng = data.engagements.find(e => e.id === eng.id);
-          setArray('engagements', (prevArr) => prevArr.map(e => e.id === eng.id ? { ...e, status: 'Completed' as const } : e));
-          const engOk = await dbUpdate('engagements', eng.id, { status: 'Completed' });
-          if (!engOk && prevEng) setArray('engagements', (prevArr) => prevArr.map(e => (e.id === eng.id ? prevEng : e)));
-        }
-      }
-    }
+    if (!ok && prev) setArray('projects', (prevArr) => prevArr.map((p) => (p.id === id ? prev : p)));
   };
 
   const deleteProject = async (id: string) => {
     const prev = data.projects.find(p => p.id === id);
-    const linkedEngs = data.engagements.filter(e => e.projectId === id);
-    const linkedEngIds = new Set(linkedEngs.map(e => e.id));
-    const linkedPayments = data.businessPayments.filter(p => linkedEngIds.has(p.engagementId));
-    const prevEngs = linkedEngs.map(e => ({ id: e.id, item: e }));
+    const linkedPayments = data.businessPayments.filter(p => p.projectId === id);
     const prevPays = linkedPayments.map(p => ({ id: p.id, item: p }));
 
     setArray('projects', (prevArr) => prevArr.filter((p) => p.id !== id));
-    setArray('engagements', (prevArr) => prevArr.filter((e) => !linkedEngIds.has(e.id)));
-    setArray('businessPayments', (prevArr) => prevArr.filter((p) => !linkedEngIds.has(p.engagementId)));
+    setArray('businessPayments', (prevArr) => prevArr.filter((p) => p.projectId !== id));
 
     let allOk = true;
     for (const p of linkedPayments) {
       const ok = await dbDelete('business_payments', p.id);
-      if (!ok) allOk = false;
-    }
-    for (const e of linkedEngs) {
-      const ok = await dbDelete('engagements', e.id);
       if (!ok) allOk = false;
     }
     const ok = await dbDelete('projects', id);
@@ -612,7 +496,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     if (!allOk && prev) {
       setArray('projects', (prevArr) => [prev, ...prevArr]);
-      for (const { id, item } of prevEngs) setArray('engagements', (prevArr) => [...prevArr, item]);
       for (const { id, item } of prevPays) setArray('businessPayments', (prevArr) => [...prevArr, item]);
     }
   };
@@ -649,7 +532,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         addPersonalDebt, updatePersonalDebt, deletePersonalDebt,
         addLead, updateLead, deleteLead,
         addClient, updateClient, deleteClient,
-        addEngagement, updateEngagement, deleteEngagement,
         addBusinessPayment, updateBusinessPayment, deleteBusinessPayment,
         addBusinessExpense, updateBusinessExpense, deleteBusinessExpense,
         addTask, updateTask, deleteTask,

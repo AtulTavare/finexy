@@ -21,9 +21,10 @@ export default function Dashboard() {
     return startOfMonth(today);
   }, [timeFilter, today]);
 
-  const totalReceivables = data.engagements.filter(e => e.status === 'Active').reduce((sum, e) => {
-    const paid = data.businessPayments.filter(p => p.engagementId === e.id).reduce((s, p) => s + p.amount, 0);
-    return sum + Math.max(0, e.value - paid);
+  const totalReceivables = data.projects.reduce((sum, p) => {
+    const totalServices = (p.servicePricing || []).reduce((s, svc) => s + svc.price, 0);
+    const paid = data.businessPayments.filter(bp => bp.projectId === p.id).reduce((s, bp) => s + bp.amount, 0);
+    return sum + Math.max(0, totalServices - paid);
   }, 0);
   const totalBusinessIncome = data.businessPayments.reduce((s, p) => s + p.amount, 0);
   const totalPersonalExpenses = data.personalExpenses.reduce((s, e) => s + e.amount, 0);
@@ -44,7 +45,7 @@ export default function Dashboard() {
   const wonLeadsCount = data.leads.filter(l => l.stage === 'Won').length;
   const convRate = totalLeadsCount > 0 ? Math.round((wonLeadsCount / totalLeadsCount) * 100) : 0;
   const pipelineValue = data.leads.filter(l => l.stage !== 'Won' && l.stage !== 'Lost').reduce((s, l) => s + l.estimatedValue, 0);
-  const mrr = data.engagements.filter(e => e.status === 'Active' && e.paymentTerms === 'Monthly').reduce((s, e) => s + e.value, 0);
+  const mrr = data.projects.reduce((s, p) => s + (p.servicePricing || []).filter(svc => svc.billing === 'monthly').reduce((sum, svc) => sum + svc.price, 0), 0);
 
   // Trend Data (Based on filter)
   const trendData = useMemo(() => {
@@ -143,8 +144,7 @@ export default function Dashboard() {
             {data.projects.filter(p => p.servicePricing?.length > 0).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(project => {
               const client = data.clients.find(c => c.id === project.clientId);
               const totalBudget = project.servicePricing.reduce((sum, s) => sum + s.price, 0);
-              const projectEngs = data.engagements.filter(e => e.projectId === project.id && e.status === 'Active');
-              const paid = projectEngs.reduce((sum, eng) => sum + data.businessPayments.filter(p => p.engagementId === eng.id).reduce((s, p) => s + p.amount, 0), 0);
+              const paid = data.businessPayments.filter(p => p.projectId === project.id).reduce((s, p) => s + p.amount, 0);
               const remaining = Math.max(0, totalBudget - paid);
               const pct = totalBudget > 0 ? Math.min(paid / totalBudget, 1) : 0;
               return (
@@ -155,8 +155,7 @@ export default function Dashboard() {
                   </div>
                   <div className="pl-2 space-y-1">
                     {project.servicePricing.map(s => {
-                      const sEngs = projectEngs.filter(e => e.serviceName === s.name);
-                      const sPaid = sEngs.reduce((sum, eng) => sum + data.businessPayments.filter(p => p.engagementId === eng.id).reduce((s, p) => s + p.amount, 0), 0);
+                      const sPaid = data.businessPayments.filter(p => p.projectId === project.id && p.serviceName === s.name).reduce((sum, p) => sum + p.amount, 0);
                       const sPct = s.price > 0 ? Math.min(sPaid / s.price, 1) : 0;
                       return (
                         <div key={s.name}>

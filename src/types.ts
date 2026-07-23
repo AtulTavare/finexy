@@ -66,25 +66,11 @@ export interface Client {
   userId?: string;
 }
 
-export interface Engagement {
-  id: string;
-  clientId: string;
-  projectId?: string;
-  serviceName?: string;
-  brand: Brand;
-  type: 'Project' | 'Retainer';
-  value: number;
-  paymentTerms: 'Milestones' | 'Monthly' | 'Upfront';
-  startDate: string;
-  status: 'Active' | 'Completed' | 'On Hold';
-  createdAt: string;
-  userId?: string;
-}
-
 export interface BusinessPayment {
   id: string;
   clientId: string;
-  engagementId: string;
+  projectId: string;
+  serviceName: string;
   amount: number;
   date: string;
   invoiceReference: string;
@@ -156,7 +142,6 @@ export interface PulseData {
   personalDebts: PersonalDebt[];
   leads: Lead[];
   clients: Client[];
-  engagements: Engagement[];
   businessPayments: BusinessPayment[];
   businessExpenses: BusinessExpense[];
   tasks: Task[];

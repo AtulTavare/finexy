@@ -50,7 +50,7 @@ export function Layout() {
     fabActions = [
       { label: 'Add Lead', action: () => trigger('open-lead-modal', '/business') },
       { label: 'Add Client', action: () => trigger('open-client-modal', '/business') },
-      { label: 'Add Engagement', action: () => trigger('open-engagement-modal', '/business') },
+
       { label: 'Log Payment', action: () => trigger('open-payment-modal', '/business') },
       { label: 'Add Expense', action: () => trigger('open-business-expense-modal', '/business') },
     ];
