@@ -580,8 +580,8 @@ function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSav
   }, [editItem, isOpen]);
 
   useEffect(() => {
-    setSelectedEngagementId(activeEngagements.length === 1 ? activeEngagements[0].id : '');
-  }, [clientId, activeEngagements]);
+    setSelectedEngagementId('');
+  }, [clientId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -593,7 +593,8 @@ function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSav
       } else {
         if (!clientId) return;
         const client = clients.find((c: any) => c.id === clientId);
-        onSaveIncoming({ clientId, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd'), invoiceReference, brand: client?.brand || 'Infinity Innovations', engagementId: selectedEngagementId || undefined });
+        const finalEngagementId = selectedEngagementId || (activeEngagements.length === 1 ? activeEngagements[0].id : undefined);
+        onSaveIncoming({ clientId, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd'), invoiceReference, brand: client?.brand || 'Infinity Innovations', engagementId: finalEngagementId });
       }
     } else {
       onSaveOutgoing({ brand, category, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd') });
