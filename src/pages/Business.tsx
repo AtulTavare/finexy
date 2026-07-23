@@ -134,7 +134,7 @@ export default function Business() {
       </div>
 
       <LeadModal isOpen={showLeadModal} onClose={() => { setShowLeadModal(false); setEditingLead(null); }} onSave={addLead} onUpdate={updateLead} editItem={editingLead} />
-      <PaymentModal isOpen={showPaymentModal} onClose={() => { setShowPaymentModal(false); setEditingPayment(null); }} onSaveIncoming={addBusinessPayment} onUpdateIncoming={updateBusinessPayment} onSaveOutgoing={addBusinessExpense} onUpdateOutgoing={updateBusinessExpense} clients={filteredClients} engagements={filteredEngagements} payments={businessPayments} editItem={editingPayment} />
+      <PaymentModal isOpen={showPaymentModal} onClose={() => { setShowPaymentModal(false); setEditingPayment(null); }} onSaveIncoming={addBusinessPayment} onUpdateIncoming={updateBusinessPayment} onSaveOutgoing={addBusinessExpense} onUpdateOutgoing={updateBusinessExpense} clients={filteredClients} engagements={filteredEngagements} payments={businessPayments} projects={projects} editItem={editingPayment} />
       <BusinessExpenseModal isOpen={showExpenseModal} onClose={() => { setShowExpenseModal(false); setEditingExpense(null); }} onSave={addBusinessExpense} onUpdate={updateBusinessExpense} editItem={editingExpense} />
       <ClientModal isOpen={showClientModal} onClose={() => { setShowClientModal(false); setEditingClient(null); }} onSave={addClient} onUpdate={updateClient} editItem={editingClient} />
       <EngagementModal isOpen={showEngagementModal} onClose={() => { setShowEngagementModal(false); setEditingEngagement(null); }} onSave={addEngagement} onUpdate={updateEngagement} clients={clients} editItem={editingEngagement} />

@@ -28,10 +28,11 @@ interface PaymentModalProps {
   clients: Client[];
   engagements: Engagement[];
   payments: BusinessPayment[];
+  projects?: Project[];
   editItem?: BusinessPayment | null;
 }
 
-export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSaveOutgoing, onUpdateOutgoing, clients, engagements, payments, editItem }: PaymentModalProps) {
+export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSaveOutgoing, onUpdateOutgoing, clients, engagements, payments, projects, editItem }: PaymentModalProps) {
   const [type, setType] = useState<'incoming' | 'outgoing'>('incoming');
   
   const [clientId, setClientId] = useState('');
@@ -132,7 +133,7 @@ export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming
                         className={`flex-1 px-3 py-1.5 text-[10px] font-semibold rounded-lg transition-all ${selectedEngagementId === e.id || (!selectedEngagementId && activeEngagements[0].id === e.id) ? 'bg-[#18181b] text-white shadow-sm' : 'bg-white text-gray-500 border border-gray-200'}`}
                         onClick={() => setSelectedEngagementId(e.id)}
                       >
-                        {e.serviceName || (e.type === 'Project' ? 'Project Fee' : 'Monthly Retainer')}
+                        {(() => { const proj = projects?.find(p => p.id === e.projectId); return e.serviceName && proj ? `${e.serviceName} (${proj.title})` : (e.serviceName || (e.type === 'Project' ? 'Project Fee' : 'Monthly Retainer')); })()}
                       </button>
                     ))}
                   </div>

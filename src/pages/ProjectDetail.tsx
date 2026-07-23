@@ -104,8 +104,8 @@ export default function ProjectDetail() {
         <h2 className="text-sm font-semibold text-gray-900 mb-4">Services</h2>
         <div className="space-y-4">
           {project.servicePricing.map(svc => {
-            const eng = projectEngs.find(e => e.serviceName === svc.name);
-            const paid = eng ? businessPayments.filter(p => p.engagementId === eng.id).reduce((s, p) => s + p.amount, 0) : 0;
+            const engs = projectEngs.filter(e => e.serviceName === svc.name);
+            const paid = engs.reduce((sum, eng) => sum + businessPayments.filter(p => p.engagementId === eng.id).reduce((s, p) => s + p.amount, 0), 0);
             const sPct = svc.price > 0 ? Math.min(paid / svc.price, 1) : 0;
             const started = new Date(svc.startDate) <= new Date();
             return (
@@ -203,6 +203,7 @@ export default function ProjectDetail() {
         clients={client ? [client] : clients}
         engagements={engagements}
         payments={businessPayments}
+        projects={projects}
       />
 
       <ConfirmDialog

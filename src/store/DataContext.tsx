@@ -530,12 +530,33 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       const existingEngs = data.engagements.filter(e => e.projectId === id);
       const clientId = prev?.clientId || '';
       const client = data.clients.find(c => c.id === clientId);
+      const claimedEngIds = new Set<string>();
       for (const svc of updates.servicePricing) {
-        const match = existingEngs.find(e => e.serviceName === svc.name);
+        let match = existingEngs.find(e => e.serviceName === svc.name);
+        if (!match) {
+          match = data.engagements.find(e =>
+            !e.projectId &&
+            !claimedEngIds.has(e.id) &&
+            e.clientId === clientId &&
+            e.status === 'Active' &&
+            e.value === svc.price &&
+            e.type === (svc.billing === 'one-time' ? 'Project' : 'Retainer')
+          );
+        }
         if (match) {
+          claimedEngIds.add(match.id);
           const prevEng = data.engagements.find(e => e.id === match.id);
-          setArray('engagements', (prevArr) => prevArr.map(e => e.id === match.id ? { ...e, value: svc.price, startDate: svc.startDate } : e));
-          const engOk = await dbUpdate('engagements', match.id, { value: svc.price, startDate: svc.startDate });
+          const updatedPaymentTerms = svc.billing === 'one-time' ? 'Upfront' as const : 'Monthly' as const;
+          setArray('engagements', (prevArr) => prevArr.map(e => e.id === match.id ? {
+            ...e, value: svc.price, startDate: svc.startDate,
+            projectId: id, serviceName: svc.name,
+            paymentTerms: updatedPaymentTerms,
+          } : e));
+          const engOk = await dbUpdate('engagements', match.id, {
+            value: svc.price, startDate: svc.startDate,
+            projectId: id, serviceName: svc.name,
+            paymentTerms: svc.billing === 'one-time' ? 'Upfront' : 'Monthly',
+          });
           if (!engOk && prevEng) setArray('engagements', (prevArr) => prevArr.map(e => (e.id === match.id ? prevEng : e)));
         } else {
           const newEng: Engagement = {
@@ -550,8 +571,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }
       }
       const currentNames = new Set(updates.servicePricing.map(s => s.name));
-      for (const eng of existingEngs) {
-        if (eng.serviceName && !currentNames.has(eng.serviceName)) {
+      const allProjectEngs = data.engagements.filter(e =>
+        e.projectId === id ||
+        (!e.projectId && e.clientId === clientId && e.status === 'Active')
+      );
+      for (const eng of allProjectEngs) {
+        if (eng.serviceName && !currentNames.has(eng.serviceName) && !claimedEngIds.has(eng.id)) {
           const prevEng = data.engagements.find(e => e.id === eng.id);
           setArray('engagements', (prevArr) => prevArr.map(e => e.id === eng.id ? { ...e, status: 'Completed' as const } : e));
           const engOk = await dbUpdate('engagements', eng.id, { status: 'Completed' });

@@ -57,9 +57,10 @@ export default function Projects() {
                     {p.servicePricing.length > 0 && (
                       <div className="space-y-2 pt-2">
                         {p.servicePricing.map(svc => {
-                          const eng = engagements.find(e => e.projectId === p.id && e.serviceName === svc.name);
-                          const paid = eng ? businessPayments.filter(bp => bp.engagementId === eng.id).reduce((s, bp) => s + bp.amount, 0) : 0;
-                          const pct = eng && eng.value > 0 ? Math.min(paid / eng.value, 1) : 0;
+                          const engs = engagements.filter(e => e.projectId === p.id && e.serviceName === svc.name);
+                          const paid = engs.reduce((sum, eng) => sum + businessPayments.filter(bp => bp.engagementId === eng.id).reduce((s, bp) => s + bp.amount, 0), 0);
+                          const firstEng = engs[0];
+                          const pct = firstEng && firstEng.value > 0 ? Math.min(paid / svc.price, 1) : 0;
                           const started = new Date(svc.startDate) <= new Date();
                           return (
                             <div key={svc.name} className="border-l-2 border-gray-200 pl-2">
@@ -69,7 +70,7 @@ export default function Projects() {
                               </div>
                               {!started ? (
                                 <div className="text-[9px] text-orange-500 font-medium">Starts {format(new Date(svc.startDate), 'MMM d')}</div>
-                              ) : eng ? (
+                              ) : engs.length > 0 ? (
                                 <div className="space-y-0.5 mt-1">
                                   <div className="w-full bg-orange-300/50 rounded-full h-1 overflow-hidden flex">
                                     <div className="bg-emerald-500 h-1 transition-all" style={{ width: `${pct * 100}%` }} />

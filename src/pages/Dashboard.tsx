@@ -155,8 +155,8 @@ export default function Dashboard() {
                   </div>
                   <div className="pl-2 space-y-1">
                     {project.servicePricing.map(s => {
-                      const sEng = projectEngs.find(e => e.serviceName === s.name);
-                      const sPaid = sEng ? data.businessPayments.filter(p => p.engagementId === sEng.id).reduce((sum, p) => sum + p.amount, 0) : 0;
+                      const sEngs = projectEngs.filter(e => e.serviceName === s.name);
+                      const sPaid = sEngs.reduce((sum, eng) => sum + data.businessPayments.filter(p => p.engagementId === eng.id).reduce((s, p) => s + p.amount, 0), 0);
                       const sPct = s.price > 0 ? Math.min(sPaid / s.price, 1) : 0;
                       return (
                         <div key={s.name}>
