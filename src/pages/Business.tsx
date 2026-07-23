@@ -558,7 +558,7 @@ function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSav
   const [brand, setBrand] = useState<Brand>('Infinity Innovations');
   const [category, setCategory] = useState<BusinessExpense['category']>('Tools');
 
-  const activeEngagements = engagements.filter((e: any) => e.clientId === clientId && e.status === 'Active');
+  const activeEngagements = engagements.filter((e: any) => e.clientId === clientId && e.status === 'Active' && e.serviceName);
   const currentEngagement = activeEngagements.find((e: any) => e.id === selectedEngagementId) || activeEngagements[0];
   const collected = currentEngagement
     ? payments.filter((p: any) => p.engagementId === currentEngagement.id).reduce((s: number, p: any) => s + p.amount, 0)

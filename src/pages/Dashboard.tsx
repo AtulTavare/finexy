@@ -44,7 +44,7 @@ export default function Dashboard() {
   const wonLeadsCount = data.leads.filter(l => l.stage === 'Won').length;
   const convRate = totalLeadsCount > 0 ? Math.round((wonLeadsCount / totalLeadsCount) * 100) : 0;
   const pipelineValue = data.leads.filter(l => l.stage !== 'Won' && l.stage !== 'Lost').reduce((s, l) => s + l.estimatedValue, 0);
-  const mrr = data.engagements.filter(e => e.status === 'Active' && e.paymentTerms === 'Retainer').reduce((s, e) => s + e.value, 0);
+  const mrr = data.engagements.filter(e => e.status === 'Active' && e.paymentTerms === 'Monthly').reduce((s, e) => s + e.value, 0);
 
   // Trend Data (Based on filter)
   const trendData = useMemo(() => {
@@ -136,15 +136,15 @@ export default function Dashboard() {
 
       <Card className="p-4 md:p-6 bg-white">
         <h2 className="text-sm font-semibold text-gray-900 mb-4">Receivables by Project</h2>
-        {data.projects.filter(p => p.oneTimeBudget + p.monthlyBudget > 0).length === 0 ? (
+        {data.projects.filter(p => p.servicePricing?.length > 0).length === 0 ? (
           <p className="text-xs text-gray-400 italic">Set service pricing when adding a project to track receivables.</p>
         ) : (
           <div className="space-y-3">
-            {data.projects.filter(p => p.oneTimeBudget + p.monthlyBudget > 0).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(project => {
+            {data.projects.filter(p => p.servicePricing?.length > 0).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(project => {
               const client = data.clients.find(c => c.id === project.clientId);
-              const totalBudget = project.oneTimeBudget + project.monthlyBudget;
-              const engs = data.engagements.filter(e => e.clientId === project.clientId && e.status === 'Active');
-              const paid = engs.reduce((sum, eng) => sum + data.businessPayments.filter(p => p.engagementId === eng.id).reduce((s, p) => s + p.amount, 0), 0);
+              const totalBudget = project.servicePricing.reduce((sum, s) => sum + s.price, 0);
+              const projectEngs = data.engagements.filter(e => e.projectId === project.id && e.status === 'Active');
+              const paid = projectEngs.reduce((sum, eng) => sum + data.businessPayments.filter(p => p.engagementId === eng.id).reduce((s, p) => s + p.amount, 0), 0);
               const remaining = Math.max(0, totalBudget - paid);
               const pct = totalBudget > 0 ? Math.min(paid / totalBudget, 1) : 0;
               return (
@@ -153,8 +153,24 @@ export default function Dashboard() {
                     <span className="font-medium text-gray-900">{project.title} <span className="text-gray-400 font-normal">{client?.name ? `(${client.name})` : ''}</span></span>
                     <span className="tabular text-gray-500">{formatCurrency(paid)} of {formatCurrency(totalBudget)}</span>
                   </div>
-                  {project.oneTimeBudget > 0 && <div className="text-[10px] text-gray-500">One-time: {formatCurrency(project.oneTimeBudget)}</div>}
-                  {project.monthlyBudget > 0 && <div className="text-[10px] text-gray-500">Monthly: {formatCurrency(project.monthlyBudget)}/mo</div>}
+                  <div className="pl-2 space-y-1">
+                    {project.servicePricing.map(s => {
+                      const sEng = projectEngs.find(e => e.serviceName === s.name);
+                      const sPaid = sEng ? data.businessPayments.filter(p => p.engagementId === sEng.id).reduce((sum, p) => sum + p.amount, 0) : 0;
+                      const sPct = s.price > 0 ? Math.min(sPaid / s.price, 1) : 0;
+                      return (
+                        <div key={s.name}>
+                          <div className="flex justify-between text-[10px]">
+                            <span className="text-gray-600">{s.name} ({s.billing})</span>
+                            <span className="tabular text-gray-500">{formatCurrency(sPaid)} of {formatCurrency(s.price)}</span>
+                          </div>
+                          <div className="w-full bg-gray-100 rounded-full h-1.5 mt-0.5">
+                            <div className="bg-emerald-400 h-1.5 rounded-full transition-all" style={{ width: `${sPct * 100}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div className="bg-emerald-500 h-2 rounded-full transition-all" style={{ width: `${pct * 100}%` }} />
                   </div>
