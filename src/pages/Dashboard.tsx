@@ -135,21 +135,22 @@ export default function Dashboard() {
       </section>
 
       <Card className="p-4 md:p-6 bg-white">
-        <h2 className="text-sm font-semibold text-gray-900 mb-4">Receivables Breakdown</h2>
-        {data.clients.filter(c => c.budget > 0).length === 0 ? (
-          <p className="text-xs text-gray-400 italic">Set a budget when adding a client to track receivables.</p>
+        <h2 className="text-sm font-semibold text-gray-900 mb-4">Receivables by Project</h2>
+        {data.projects.filter(p => p.budget > 0).length === 0 ? (
+          <p className="text-xs text-gray-400 italic">Set a budget when adding a project to track receivables.</p>
         ) : (
           <div className="space-y-3">
-            {data.clients.filter(c => c.budget > 0).map(client => {
-              const eng = data.engagements.find(e => e.clientId === client.id && e.status === 'Active');
+            {data.projects.filter(p => p.budget > 0).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(project => {
+              const client = data.clients.find(c => c.id === project.clientId);
+              const eng = data.engagements.find(e => e.clientId === project.clientId && e.status === 'Active');
               const paid = eng ? data.businessPayments.filter(p => p.engagementId === eng.id).reduce((s, p) => s + p.amount, 0) : 0;
-              const remaining = Math.max(0, client.budget - paid);
-              const pct = client.budget > 0 ? Math.min(paid / client.budget, 1) : 0;
+              const remaining = Math.max(0, project.budget - paid);
+              const pct = project.budget > 0 ? Math.min(paid / project.budget, 1) : 0;
               return (
-                <div key={client.id} className="flex flex-col space-y-1">
+                <div key={project.id} className="flex flex-col space-y-1">
                   <div className="flex justify-between text-xs">
-                    <span className="font-medium text-gray-900">{client.name}</span>
-                    <span className="tabular text-gray-500">{formatCurrency(paid)} of {formatCurrency(client.budget)}</span>
+                    <span className="font-medium text-gray-900">{project.title} <span className="text-gray-400 font-normal">{client?.name ? `(${client.name})` : ''}</span></span>
+                    <span className="tabular text-gray-500">{formatCurrency(paid)} of {formatCurrency(project.budget)}</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div className="bg-emerald-500 h-2 rounded-full transition-all" style={{ width: `${pct * 100}%` }} />

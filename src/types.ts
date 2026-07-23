@@ -62,7 +62,6 @@ export interface Client {
   businessName?: string;
   services: string[];
   status: 'Active' | 'Paused' | 'Churned';
-  budget: number;
   createdAt: string;
   userId?: string;
 }
@@ -124,6 +123,7 @@ export interface Project {
   services: string[];
   startDate: string;
   deadline: string;
+  budget: number;
   status: 'Not Started' | 'In Progress' | 'Under Review' | 'Completed';
   createdAt: string;
   userId?: string;

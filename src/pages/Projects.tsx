@@ -3,6 +3,7 @@ import { useData } from '../store/DataContext';
 import { Card, Button, Input, Label, Modal, Badge, DatePicker } from '../components/ui';
 import { Client, Project } from '../types';
 import { format } from 'date-fns';
+import { formatCurrency } from '../lib/utils';
 
 const SERVICES_OFFERED = [
   'Website Development',
@@ -17,7 +18,7 @@ const SERVICES_OFFERED = [
 ];
 
 export default function Projects() {
-  const { projects, clients, addProject, updateProject, deleteProject } = useData();
+  const { projects, clients, engagements, businessPayments, addProject, updateProject, deleteProject } = useData();
   const [showModal, setShowModal] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
 
@@ -61,6 +62,22 @@ export default function Projects() {
                       <span className="text-gray-900">Timeline</span>
                       <span>{format(new Date(p.startDate), 'MMM d')} - {format(new Date(p.deadline), 'MMM d')}</span>
                     </div>
+                    {p.budget > 0 && (() => {
+                      const eng = engagements.find(e => e.clientId === p.clientId && e.status === 'Active');
+                      const paid = eng ? businessPayments.filter(bp => bp.engagementId === eng.id).reduce((s, bp) => s + bp.amount, 0) : 0;
+                      const pct = Math.min(paid / p.budget, 1);
+                      return (
+                        <div className="space-y-1 pt-2">
+                          <div className="flex justify-between text-[10px]">
+                            <span className="text-gray-500">{formatCurrency(paid)} collected</span>
+                            <span className="font-semibold">{formatCurrency(p.budget)} budget</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-1.5">
+                            <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${pct * 100}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                   
                   <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between">
@@ -110,12 +127,13 @@ function ProjectModal({ isOpen, onClose, onSave, onUpdate, clients, editItem }: 
   const [startDate, setStartDate] = useState(new Date());
   const [deadline, setDeadline] = useState(new Date());
   const [status, setStatus] = useState<'Not Started' | 'In Progress' | 'Under Review' | 'Completed'>('Not Started');
+  const [budget, setBudget] = useState('');
 
   useEffect(() => {
     if (editItem) {
-      setTitle(editItem.title); setClientId(editItem.clientId); setServices(editItem.services); setStartDate(new Date(editItem.startDate)); setDeadline(new Date(editItem.deadline)); setStatus(editItem.status);
+      setTitle(editItem.title); setClientId(editItem.clientId); setServices(editItem.services); setStartDate(new Date(editItem.startDate)); setDeadline(new Date(editItem.deadline)); setStatus(editItem.status); setBudget(editItem.budget ? editItem.budget.toString() : '');
     } else {
-      setTitle(''); setClientId(''); setServices([]); setStartDate(new Date()); setDeadline(new Date()); setStatus('Not Started');
+      setTitle(''); setClientId(''); setServices([]); setStartDate(new Date()); setDeadline(new Date()); setStatus('Not Started'); setBudget('');
     }
   }, [editItem, isOpen]);
 
@@ -127,10 +145,10 @@ function ProjectModal({ isOpen, onClose, onSave, onUpdate, clients, editItem }: 
     e.preventDefault();
     if (!title) return;
     if (editItem && onUpdate) {
-      onUpdate(editItem.id, { title, services, startDate: format(startDate, 'yyyy-MM-dd'), deadline: format(deadline, 'yyyy-MM-dd'), status });
+      onUpdate(editItem.id, { title, services, startDate: format(startDate, 'yyyy-MM-dd'), deadline: format(deadline, 'yyyy-MM-dd'), status, budget: parseFloat(budget) || 0 });
     } else {
       if (!clientId) return;
-      onSave({ title, clientId, services, startDate: format(startDate, 'yyyy-MM-dd'), deadline: format(deadline, 'yyyy-MM-dd'), status });
+      onSave({ title, clientId, services, startDate: format(startDate, 'yyyy-MM-dd'), deadline: format(deadline, 'yyyy-MM-dd'), status, budget: parseFloat(budget) || 0 });
     }
     onClose();
   };
@@ -168,6 +186,7 @@ function ProjectModal({ isOpen, onClose, onSave, onUpdate, clients, editItem }: 
             <option value="Completed">Completed</option>
           </select>
         </div>
+        <div><Label>Project Budget (₹)</Label><Input type="number" step="0.01" value={budget} onChange={e => setBudget(e.target.value)} placeholder="0" /></div>
         <div>
           <Label>Services</Label>
           <div className="mt-2 grid grid-cols-2 gap-2 max-h-40 overflow-y-auto no-scrollbar p-2 border border-gray-200 bg-white rounded-md">

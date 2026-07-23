@@ -345,7 +345,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             contact: l.source,
             services: [],
             status: 'Active',
-            budget: 0,
             createdAt: new Date().toISOString(),
           };
           dbInsert('clients', newClient);
@@ -370,21 +369,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setArray('clients', (prev) => [newItem, ...prev]);
     const ok = await dbInsert('clients', newItem);
     if (!ok) setArray('clients', (prev) => prev.filter((c) => c.id !== newItem.id));
-    if (ok && item.budget > 0) {
-      const engagement: Engagement = {
-        id: generateId(),
-        clientId: newItem.id,
-        brand: item.brand,
-        type: 'Project',
-        value: item.budget,
-        paymentTerms: 'Milestones',
-        startDate: new Date().toISOString().slice(0, 10),
-        status: 'Active',
-        createdAt: new Date().toISOString(),
-      };
-      setArray('engagements', (prev) => [engagement, ...prev]);
-      await dbInsert('engagements', engagement);
-    }
   };
 
   const updateClient = async (id: string, updates: Partial<Client>) => {
@@ -392,29 +376,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setArray('clients', (prevArr) => prevArr.map((c) => (c.id === id ? { ...c, ...updates } : c)));
     const ok = await dbUpdate('clients', id, updates);
     if (!ok && prev) setArray('clients', (prevArr) => prevArr.map((c) => (c.id === id ? prev : c)));
-    if (ok && updates.budget !== undefined) {
-      const activeEng = data.engagements.find(e => e.clientId === id && e.status === 'Active');
-      if (activeEng) {
-        const prevEng = data.engagements.find(e => e.id === activeEng.id);
-        setArray('engagements', (prevArr) => prevArr.map((e) => (e.id === activeEng.id ? { ...e, value: updates.budget! } : e)));
-        const engOk = await dbUpdate('engagements', activeEng.id, { value: updates.budget });
-        if (!engOk && prevEng) setArray('engagements', (prevArr) => prevArr.map((e) => (e.id === activeEng.id ? prevEng : e)));
-      } else if (updates.budget > 0) {
-        const newEng: Engagement = {
-          id: generateId(),
-          clientId: id,
-          brand: updates.brand || prev?.brand || 'Infinity Innovations',
-          type: 'Project',
-          value: updates.budget,
-          paymentTerms: 'Milestones',
-          startDate: new Date().toISOString().slice(0, 10),
-          status: 'Active',
-          createdAt: new Date().toISOString(),
-        };
-        setArray('engagements', (prev) => [newEng, ...prev]);
-        await dbInsert('engagements', newEng);
-      }
-    }
   };
 
   const deleteClient = async (id: string) => {
@@ -540,6 +501,22 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setArray('projects', (prev) => [newItem, ...prev]);
     const ok = await dbInsert('projects', newItem);
     if (!ok) setArray('projects', (prev) => prev.filter((p) => p.id !== newItem.id));
+    if (ok && item.budget > 0) {
+      const client = data.clients.find(c => c.id === item.clientId);
+      const engagement: Engagement = {
+        id: generateId(),
+        clientId: item.clientId,
+        brand: client?.brand || 'Infinity Innovations',
+        type: 'Project',
+        value: item.budget,
+        paymentTerms: 'Milestones',
+        startDate: format(new Date(item.startDate || new Date()), 'yyyy-MM-dd'),
+        status: 'Active',
+        createdAt: new Date().toISOString(),
+      };
+      setArray('engagements', (prev) => [engagement, ...prev]);
+      await dbInsert('engagements', engagement);
+    }
   };
 
   const updateProject = async (id: string, updates: Partial<Project>) => {
@@ -547,6 +524,29 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setArray('projects', (prevArr) => prevArr.map((p) => (p.id === id ? { ...p, ...updates } : p)));
     const ok = await dbUpdate('projects', id, updates);
     if (!ok && prev) setArray('projects', (prevArr) => prevArr.map((p) => (p.id === id ? prev : p)));
+    if (ok && updates.budget !== undefined) {
+      const activeEng = data.engagements.find(e => e.clientId === (prev?.clientId || id) && e.status === 'Active');
+      if (activeEng) {
+        const prevEng = data.engagements.find(e => e.id === activeEng.id);
+        setArray('engagements', (prevArr) => prevArr.map((e) => (e.id === activeEng.id ? { ...e, value: updates.budget! } : e)));
+        const engOk = await dbUpdate('engagements', activeEng.id, { value: updates.budget });
+        if (!engOk && prevEng) setArray('engagements', (prevArr) => prevArr.map((e) => (e.id === activeEng.id ? prevEng : e)));
+      } else if (updates.budget > 0) {
+        const newEng: Engagement = {
+          id: generateId(),
+          clientId: prev?.clientId || id,
+          brand: prev?.services?.[0] ? 'Infinity Innovations' : 'Infinity Innovations',
+          type: 'Project',
+          value: updates.budget,
+          paymentTerms: 'Milestones',
+          startDate: new Date().toISOString().slice(0, 10),
+          status: 'Active',
+          createdAt: new Date().toISOString(),
+        };
+        setArray('engagements', (prev) => [newEng, ...prev]);
+        await dbInsert('engagements', newEng);
+      }
+    }
   };
 
   const deleteProject = async (id: string) => {
