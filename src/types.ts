@@ -130,7 +130,6 @@ export interface Project {
   servicePricing: ServicePricing[];
   startDate: string;
   deadline: string;
-  budget: number;
   oneTimeBudget: number;
   monthlyBudget: number;
   status: 'Not Started' | 'In Progress' | 'Under Review' | 'Completed';

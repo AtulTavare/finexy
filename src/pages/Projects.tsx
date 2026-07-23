@@ -169,10 +169,10 @@ function ProjectModal({ isOpen, onClose, onSave, onUpdate, clients, editItem }: 
     if (!title) return;
     const services = servicePricing.map(s => s.name);
     if (editItem && onUpdate) {
-      onUpdate(editItem.id, { title, services, servicePricing, startDate: format(startDate, 'yyyy-MM-dd'), deadline: format(deadline, 'yyyy-MM-dd'), status, budget: 0, oneTimeBudget: oneTimeTotal, monthlyBudget: monthlyTotal });
+      onUpdate(editItem.id, { title, services, servicePricing, startDate: format(startDate, 'yyyy-MM-dd'), deadline: format(deadline, 'yyyy-MM-dd'), status, oneTimeBudget: oneTimeTotal, monthlyBudget: monthlyTotal });
     } else {
       if (!clientId) return;
-      onSave({ title, clientId, services, servicePricing, startDate: format(startDate, 'yyyy-MM-dd'), deadline: format(deadline, 'yyyy-MM-dd'), status, budget: 0, oneTimeBudget: oneTimeTotal, monthlyBudget: monthlyTotal });
+      onSave({ title, clientId, services, servicePricing, startDate: format(startDate, 'yyyy-MM-dd'), deadline: format(deadline, 'yyyy-MM-dd'), status, oneTimeBudget: oneTimeTotal, monthlyBudget: monthlyTotal });
     }
     onClose();
   };
