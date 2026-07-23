@@ -588,9 +588,33 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const deleteProject = async (id: string) => {
     const prev = data.projects.find(p => p.id === id);
+    const linkedEngs = data.engagements.filter(e => e.projectId === id);
+    const linkedEngIds = new Set(linkedEngs.map(e => e.id));
+    const linkedPayments = data.businessPayments.filter(p => linkedEngIds.has(p.engagementId));
+    const prevEngs = linkedEngs.map(e => ({ id: e.id, item: e }));
+    const prevPays = linkedPayments.map(p => ({ id: p.id, item: p }));
+
     setArray('projects', (prevArr) => prevArr.filter((p) => p.id !== id));
+    setArray('engagements', (prevArr) => prevArr.filter((e) => !linkedEngIds.has(e.id)));
+    setArray('businessPayments', (prevArr) => prevArr.filter((p) => !linkedEngIds.has(p.engagementId)));
+
+    let allOk = true;
+    for (const p of linkedPayments) {
+      const ok = await dbDelete('business_payments', p.id);
+      if (!ok) allOk = false;
+    }
+    for (const e of linkedEngs) {
+      const ok = await dbDelete('engagements', e.id);
+      if (!ok) allOk = false;
+    }
     const ok = await dbDelete('projects', id);
-    if (!ok && prev) setArray('projects', (prevArr) => [prev, ...prevArr]);
+    if (!ok) allOk = false;
+
+    if (!allOk && prev) {
+      setArray('projects', (prevArr) => [prev, ...prevArr]);
+      for (const { id, item } of prevEngs) setArray('engagements', (prevArr) => [...prevArr, item]);
+      for (const { id, item } of prevPays) setArray('businessPayments', (prevArr) => [...prevArr, item]);
+    }
   };
 
   const addMeeting = async (item: Omit<Meeting, 'id' | 'createdAt'>) => {

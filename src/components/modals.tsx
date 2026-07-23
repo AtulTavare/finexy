@@ -34,7 +34,8 @@ interface PaymentModalProps {
 
 export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSaveOutgoing, onUpdateOutgoing, clients, engagements, payments, projects, editItem }: PaymentModalProps) {
   const [type, setType] = useState<'incoming' | 'outgoing'>('incoming');
-  
+
+  const [projectId, setProjectId] = useState('');
   const [clientId, setClientId] = useState('');
   const [selectedEngagementId, setSelectedEngagementId] = useState<string>('');
   const [amount, setAmount] = useState('');
@@ -44,8 +45,11 @@ export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming
   const [brand, setBrand] = useState<Brand>('Infinity Innovations');
   const [category, setCategory] = useState<BusinessExpense['category']>('Tools');
 
-  const activeEngagements = engagements.filter((e: any) => e.clientId === clientId && e.status === 'Active' && e.serviceName);
-  const currentEngagement = activeEngagements.find((e: any) => e.id === selectedEngagementId) || activeEngagements[0];
+  const validEngagements = useMemo(
+    () => engagements.filter((e: any) => e.clientId === clientId && e.projectId === projectId && e.status === 'Active' && e.serviceName),
+    [engagements, clientId, projectId]
+  );
+  const currentEngagement = validEngagements.find((e: any) => e.id === selectedEngagementId) || validEngagements[0];
   const amountNum = parseFloat(amount) || 0;
   const collected = currentEngagement
     ? payments.filter((p: any) => p.engagementId === currentEngagement.id).reduce((s: number, p: any) => s + p.amount, 0)
@@ -54,9 +58,16 @@ export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming
   const progress = currentEngagement ? Math.min(collected / currentEngagement.value, 1) : 0;
   const projectedProgress = currentEngagement ? Math.min(projectedCollected / currentEngagement.value, 1) : 0;
 
+  const projectClientIds = useMemo(() => {
+    const ids = new Set(engagements.filter((e: any) => e.projectId === projectId).map((e: any) => e.clientId));
+    return ids;
+  }, [engagements, projectId]);
+
   useEffect(() => {
     if (editItem) {
       setType('incoming');
+      const payEngagement = engagements.find((e: any) => e.id === editItem.engagementId);
+      setProjectId(payEngagement?.projectId || '');
       setClientId(editItem.clientId);
       setSelectedEngagementId(editItem.engagementId || '');
       setAmount(editItem.amount.toString());
@@ -64,9 +75,14 @@ export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming
       setInvoiceReference(editItem.invoiceReference);
     } else {
       setType('incoming');
-      setClientId(''); setSelectedEngagementId(''); setAmount(''); setDate(new Date()); setInvoiceReference(''); setBrand('Infinity Innovations'); setCategory('Tools');
+      setProjectId(''); setClientId(''); setSelectedEngagementId(''); setAmount(''); setDate(new Date()); setInvoiceReference(''); setBrand('Infinity Innovations'); setCategory('Tools');
     }
-  }, [editItem, isOpen]);
+  }, [editItem, isOpen, engagements]);
+
+  useEffect(() => {
+    setClientId('');
+    setSelectedEngagementId('');
+  }, [projectId]);
 
   useEffect(() => {
     setSelectedEngagementId('');
@@ -80,9 +96,9 @@ export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming
       if (editItem && onUpdateIncoming) {
         onUpdateIncoming(editItem.id, { clientId, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd'), invoiceReference });
       } else {
-        if (!clientId) return;
+        if (!clientId || !projectId) return;
         const client = clients.find((c: any) => c.id === clientId);
-        const finalEngagementId = selectedEngagementId || (activeEngagements.length === 1 ? activeEngagements[0].id : undefined);
+        const finalEngagementId = selectedEngagementId || (validEngagements.length === 1 ? validEngagements[0].id : undefined);
         onSaveIncoming({ clientId, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd'), invoiceReference, brand: client?.brand || 'Infinity Innovations', engagementId: finalEngagementId });
       }
     } else {
@@ -116,24 +132,33 @@ export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming
         {type === 'incoming' ? (
           <>
             <div>
-              <Label>Client</Label>
-              <Select value={clientId} onChange={e => setClientId(e.target.value)} required>
-                <option value="">Select a client...</option>
-                {clients.map((c: any) => <option key={c.id} value={c.id}>{c.name} ({c.brand})</option>)}
+              <Label>Project</Label>
+              <Select value={projectId} onChange={e => setProjectId(e.target.value)} required={!editItem}>
+                <option value="">Select a project...</option>
+                {(projects || []).map((p: any) => <option key={p.id} value={p.id}>{p.title}</option>)}
               </Select>
             </div>
-            {clientId && activeEngagements.length > 0 ? (
+            {projectId && (
+              <div>
+                <Label>Client</Label>
+                <Select value={clientId} onChange={e => setClientId(e.target.value)} required>
+                  <option value="">Select a client...</option>
+                  {clients.filter((c: any) => projectClientIds.has(c.id)).map((c: any) => <option key={c.id} value={c.id}>{c.name} ({c.brand})</option>)}
+                </Select>
+              </div>
+            )}
+            {clientId && validEngagements.length > 0 ? (
               <div className="bg-gray-50 rounded-xl p-3 space-y-2">
-                {activeEngagements.length > 1 && (
+                {validEngagements.length > 1 && (
                   <div className="flex gap-2">
-                    {activeEngagements.map((e: any) => (
+                    {validEngagements.map((e: any) => (
                       <button
                         key={e.id}
                         type="button"
-                        className={`flex-1 px-3 py-1.5 text-[10px] font-semibold rounded-lg transition-all ${selectedEngagementId === e.id || (!selectedEngagementId && activeEngagements[0].id === e.id) ? 'bg-[#18181b] text-white shadow-sm' : 'bg-white text-gray-500 border border-gray-200'}`}
+                        className={`flex-1 px-3 py-1.5 text-[10px] font-semibold rounded-lg transition-all ${selectedEngagementId === e.id || (!selectedEngagementId && validEngagements[0].id === e.id) ? 'bg-[#18181b] text-white shadow-sm' : 'bg-white text-gray-500 border border-gray-200'}`}
                         onClick={() => setSelectedEngagementId(e.id)}
                       >
-                        {(() => { const proj = projects?.find(p => p.id === e.projectId); return e.serviceName && proj ? `${e.serviceName} (${proj.title})` : (e.serviceName || (e.type === 'Project' ? 'Project Fee' : 'Monthly Retainer')); })()}
+                        {e.serviceName}
                       </button>
                     ))}
                   </div>
@@ -185,7 +210,7 @@ export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming
             <div><Label>Date</Label><DatePicker value={date} onChange={setDate} /></div>
           </>
         )}
-        <Button type="submit" className="w-full mt-4" disabled={type === 'incoming' && clients.length === 0 && !editItem}>{editItem ? 'Update Payment' : `Save ${type === 'incoming' ? 'Payment' : 'Expense'}`}</Button>
+        <Button type="submit" className="w-full mt-4" disabled={type === 'incoming' && (!projectId || !clientId) && !editItem}>{editItem ? 'Update Payment' : `Save ${type === 'incoming' ? 'Payment' : 'Expense'}`}</Button>
       </form>
     </Modal>
   );
