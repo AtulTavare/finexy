@@ -560,10 +560,13 @@ function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSav
 
   const activeEngagements = engagements.filter((e: any) => e.clientId === clientId && e.status === 'Active' && e.serviceName);
   const currentEngagement = activeEngagements.find((e: any) => e.id === selectedEngagementId) || activeEngagements[0];
+  const amountNum = parseFloat(amount) || 0;
   const collected = currentEngagement
     ? payments.filter((p: any) => p.engagementId === currentEngagement.id).reduce((s: number, p: any) => s + p.amount, 0)
     : 0;
+  const projectedCollected = collected + amountNum;
   const progress = currentEngagement ? Math.min(collected / currentEngagement.value, 1) : 0;
+  const projectedProgress = currentEngagement ? Math.min(projectedCollected / currentEngagement.value, 1) : 0;
 
   useEffect(() => {
     if (editItem) {
@@ -650,11 +653,18 @@ function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSav
                   </div>
                 )}
                 <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">{formatCurrency(collected)} collected of {formatCurrency(currentEngagement?.value || 0)}</span>
-                  <span className="font-semibold text-gray-800">{Math.round(progress * 100)}%</span>
+                  {amountNum > 0 ? (
+                    <span className="text-gray-500">{formatCurrency(collected)} + <span className="text-orange-500 font-medium">{formatCurrency(amountNum)}</span> → {formatCurrency(projectedCollected)} of {formatCurrency(currentEngagement?.value || 0)}</span>
+                  ) : (
+                    <span className="text-gray-500">{formatCurrency(collected)} collected of {formatCurrency(currentEngagement?.value || 0)}</span>
+                  )}
+                  <span className="font-semibold text-gray-800">{Math.round(projectedProgress * 100)}%</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-gray-200 rounded-full h-2 relative">
                   <div className="bg-emerald-500 h-2 rounded-full transition-all" style={{ width: `${progress * 100}%` }} />
+                  {amountNum > 0 && (
+                    <div className="absolute inset-0 h-2 rounded-full transition-all" style={{ width: `${projectedProgress * 100}%`, background: 'linear-gradient(90deg, transparent 0%, #f97316 50%, #f97316 100%)', mask: `linear-gradient(90deg, black ${progress * 100}%, transparent ${progress * 100}%)`, WebkitMask: `linear-gradient(90deg, black ${progress * 100}%, transparent ${progress * 100}%)` }} />
+                  )}
                 </div>
               </div>
             ) : clientId ? (
