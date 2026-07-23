@@ -3,23 +3,11 @@ import { useLocation } from 'react-router-dom';
 import { useData } from '../store/DataContext';
 import { Card, Button, Input, Select, Label, Modal, Badge, DatePicker, ConfirmDialog } from '../components/ui';
 import { formatCurrency } from '../lib/utils';
-import { Brand, Lead, Client, Engagement, BusinessPayment, BusinessExpense } from '../types';
+import { Brand, Lead, Client, Engagement, BusinessPayment, BusinessExpense, Project } from '../types';
 import { format } from 'date-fns';
 import { Trash2 } from 'lucide-react';
 
 const BRANDS: (Brand | 'All')[] = ['All', 'Infinity Innovations'];
-
-const SERVICES_OFFERED = [
-  'Website Development',
-  'Web App Development',
-  'App Development',
-  'Digital Marketing',
-  'Social Media Marketing',
-  'Content Creation',
-  'AI Agent Automation',
-  'WhatsApp AI Agent',
-  'Custom AI App'
-];
 
 export default function Business() {
   const [activeBrand, setActiveBrand] = useState<Brand | 'All'>('All');
@@ -137,8 +125,8 @@ export default function Business() {
 
       <div>
         {activeTab === 'pipeline' && <PipelineView leads={filteredLeads} updateLead={updateLead} deleteLead={deleteLead} onEdit={(lead) => { setEditingLead(lead); setShowLeadModal(true); }} />}
-        {activeTab === 'clients' && <ClientsView clients={filteredClients} onEdit={(c) => { setEditingClient(c); setShowClientModal(true); }} />}
-        {activeTab === 'engagements' && <EngagementsView engagements={filteredEngagements} clients={clients} onEdit={(e) => { setEditingEngagement(e); setShowEngagementModal(true); }} />}
+        {activeTab === 'clients' && <ClientsView clients={filteredClients} projects={projects} onEdit={(c) => { setEditingClient(c); setShowClientModal(true); }} />}
+        {activeTab === 'engagements' && <EngagementsView engagements={filteredEngagements} clients={clients} onEdit={(e) => { setEditingEngagement(e); setShowEngagementModal(true); }} deleteEngagement={deleteEngagement} />}
         {activeTab === 'payments' && <PaymentsView payments={filteredPayments} clients={clients} engagements={engagements} deletePayment={deleteBusinessPayment} onEdit={(p) => { setEditingPayment(p); setShowPaymentModal(true); }} />}
         {activeTab === 'expenses' && <ExpensesView expenses={filteredExpenses} deleteExpense={deleteBusinessExpense} onEdit={(e) => { setEditingExpense(e); setShowExpenseModal(true); }} />}
       </div>
@@ -276,10 +264,11 @@ function PipelineView({ leads, updateLead, deleteLead, onEdit }: PipelineViewPro
 
 interface ClientsViewProps {
   clients: Client[];
+  projects: Project[];
   onEdit: (client: Client) => void;
 }
 
-function ClientsView({ clients, onEdit }: ClientsViewProps) {
+function ClientsView({ clients, projects, onEdit }: ClientsViewProps) {
   if (clients.length === 0) return <div className="text-gray-900 italic">No clients yet.</div>;
   return (
     <Card className="p-0 bg-white">
@@ -287,32 +276,39 @@ function ClientsView({ clients, onEdit }: ClientsViewProps) {
         <thead>
           <tr className="text-xs uppercase text-gray-500 tracking-wider border-b border-gray-200">
             <th className="pb-2 p-4 md:p-6 font-semibold">Client Name</th>
-            <th className="pb-2 p-4 md:p-6 font-semibold hidden md:table-cell">Services</th>
+            <th className="pb-2 p-4 md:p-6 font-semibold hidden md:table-cell">Projects</th>
             <th className="pb-2 p-4 md:p-6 font-semibold hidden md:table-cell">Contact</th>
             <th className="pb-2 p-4 md:p-6 font-semibold">Status</th>
           </tr>
         </thead>
         <tbody>
-          {clients.map((c: any) => (
-            <tr key={c.id} className="border-b border-gray-200 hover:bg-gray-50 cursor-pointer" onClick={() => onEdit(c)}>
-              <td className="p-4 md:p-6 font-medium">
-                <div>{c.name}</div>
-                <div className="md:hidden text-[10px] text-gray-500 mt-0.5">{c.contact}</div>
-                {c.businessName && <div className="text-[10px] text-gray-900 mt-1">{c.businessName}</div>}
-              </td>
-              <td className="p-4 md:p-6 hidden md:table-cell">
-                <div className="flex flex-wrap gap-1">
-                  {c.services?.map((s: string) => (
-                    <Badge key={s} variant="default">{s}</Badge>
-                  ))}
-                </div>
-              </td>
-              <td className="p-4 md:p-6 hidden md:table-cell text-gray-900">{c.contact}</td>
-              <td className="p-4 md:p-6">
-                <Badge variant={c.status === 'Active' ? 'success' : c.status === 'Paused' ? 'warning' : 'danger'}>{c.status}</Badge>
-              </td>
-            </tr>
-          ))}
+          {clients.map((c: any) => {
+            const clientProjects = projects.filter((p: any) => p.clientId === c.id);
+            return (
+              <tr key={c.id} className="border-b border-gray-200 hover:bg-gray-50 cursor-pointer" onClick={() => onEdit(c)}>
+                <td className="p-4 md:p-6 font-medium">
+                  <div>{c.name}</div>
+                  <div className="md:hidden text-[10px] text-gray-500 mt-0.5">{c.contact}</div>
+                  {c.businessName && <div className="text-[10px] text-gray-900 mt-1">{c.businessName}</div>}
+                </td>
+                <td className="p-4 md:p-6 hidden md:table-cell">
+                  <div className="flex flex-wrap gap-1">
+                    {clientProjects.length === 0 ? (
+                      <span className="text-[10px] text-gray-400 italic">No projects</span>
+                    ) : (
+                      clientProjects.map((p: any) => (
+                        <Badge key={p.id} variant="default">{p.title}</Badge>
+                      ))
+                    )}
+                  </div>
+                </td>
+                <td className="p-4 md:p-6 hidden md:table-cell text-gray-900">{c.contact}</td>
+                <td className="p-4 md:p-6">
+                  <Badge variant={c.status === 'Active' ? 'success' : c.status === 'Paused' ? 'warning' : 'danger'}>{c.status}</Badge>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </Card>
@@ -323,9 +319,11 @@ interface EngagementsViewProps {
   engagements: Engagement[];
   clients: Client[];
   onEdit: (engagement: Engagement) => void;
+  deleteEngagement: (id: string) => void;
 }
 
-function EngagementsView({ engagements, clients, onEdit }: EngagementsViewProps) {
+function EngagementsView({ engagements, clients, onEdit, deleteEngagement }: EngagementsViewProps) {
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   if (engagements.length === 0) return <div className="text-gray-900 italic">No engagements yet.</div>;
   return (
     <Card className="p-0 bg-white">
@@ -336,6 +334,7 @@ function EngagementsView({ engagements, clients, onEdit }: EngagementsViewProps)
             <th className="pb-2 p-4 md:p-6 font-semibold hidden md:table-cell">Terms</th>
             <th className="pb-2 p-4 md:p-6 font-semibold text-right">Value</th>
             <th className="pb-2 p-4 md:p-6 font-semibold">Status</th>
+            <th className="pb-2 p-4 md:p-6"></th>
           </tr>
         </thead>
         <tbody>
@@ -349,11 +348,21 @@ function EngagementsView({ engagements, clients, onEdit }: EngagementsViewProps)
                 <td className="p-4 md:p-6">
                   <Badge variant={e.status === 'Active' ? 'success' : 'default'}>{e.status}</Badge>
                 </td>
+                <td className="p-4 md:p-6 text-right">
+                  <button onClick={(e2) => { e2.stopPropagation(); setDeleteTarget({ id: e.id, name: `${client?.name || 'Unknown'}'s engagement` }); }} className="text-gray-900 hover:text-red-500 p-1 cursor-pointer"><Trash2 size={14} /></button>
+                </td>
               </tr>
             );
           })}
         </tbody>
       </table>
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Delete Engagement"
+        message={`Are you sure you want to delete the ${deleteTarget?.name}?`}
+        onConfirm={() => { if (deleteTarget) deleteEngagement(deleteTarget.id); setDeleteTarget(null); }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </Card>
   );
 }
@@ -765,28 +774,23 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
   const [mail, setMail] = useState('');
   const [address, setAddress] = useState('');
   const [businessName, setBusinessName] = useState('');
-  const [services, setServices] = useState<string[]>([]);
   const [status, setStatus] = useState<'Active' | 'Paused' | 'Churned'>('Active');
 
   useEffect(() => {
     if (editItem) {
-      setName(editItem.name); setBrand(editItem.brand); setContact(editItem.contact); setMail(editItem.mail); setAddress(editItem.address); setBusinessName(editItem.businessName); setServices(editItem.services); setStatus(editItem.status);
+      setName(editItem.name); setBrand(editItem.brand); setContact(editItem.contact); setMail(editItem.mail); setAddress(editItem.address); setBusinessName(editItem.businessName); setStatus(editItem.status);
     } else {
-      setName(''); setBrand('Infinity Innovations'); setContact(''); setMail(''); setAddress(''); setBusinessName(''); setServices([]); setStatus('Active');
+      setName(''); setBrand('Infinity Innovations'); setContact(''); setMail(''); setAddress(''); setBusinessName(''); setStatus('Active');
     }
   }, [editItem, isOpen]);
-
-  const toggleService = (s: string) => {
-    setServices(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name) return;
     if (editItem && onUpdate) {
-      onUpdate(editItem.id, { name, brand, contact, mail, address, businessName, services, status });
+      onUpdate(editItem.id, { name, brand, contact, mail, address, businessName, status });
     } else {
-      onSave({ name, brand, contact, mail, address, businessName, services, status });
+      onSave({ name, brand, contact, mail, address, businessName, status });
     }
     onClose();
   };
@@ -815,22 +819,6 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
         <div><Label>Contact Number</Label><Input value={contact} onChange={e => setContact(e.target.value)} /></div>
         <div><Label>Business Name</Label><Input value={businessName} onChange={e => setBusinessName(e.target.value)} /></div>
         <div><Label>Address</Label><Input value={address} onChange={e => setAddress(e.target.value)} /></div>
-        <div>
-          <Label>Services Interested In</Label>
-          <div className="mt-2 grid grid-cols-2 gap-2 max-h-40 overflow-y-auto no-scrollbar p-2 border border-gray-200 bg-white rounded-md">
-            {SERVICES_OFFERED.map(s => (
-              <label key={s} className="flex items-center space-x-2 text-xs text-gray-800">
-                <input 
-                  type="checkbox" 
-                  checked={services.includes(s)}
-                  onChange={() => toggleService(s)}
-                  className="rounded border-gray-200 bg-white text-green-500 focus:ring-green-400"
-                />
-                <span>{s}</span>
-              </label>
-            ))}
-          </div>
-        </div>
         <Button type="submit" className="w-full mt-4">{editItem ? 'Update Client' : 'Save Client'}</Button>
       </form>
     </Modal>
