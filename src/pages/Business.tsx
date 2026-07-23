@@ -580,8 +580,8 @@ function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSav
   }, [editItem, isOpen]);
 
   useEffect(() => {
-    setSelectedEngagementId('');
-  }, [clientId]);
+    setSelectedEngagementId(activeEngagements.length === 1 ? activeEngagements[0].id : '');
+  }, [clientId, activeEngagements]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

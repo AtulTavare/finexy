@@ -407,7 +407,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addBusinessPayment = async (item: Omit<BusinessPayment, 'id' | 'createdAt'> & { engagementId?: string }) => {
-    const resolvedEngagementId = item.engagementId || data.engagements.find(e => e.clientId === item.clientId && e.status === 'Active')?.id || null;
+    const resolvedEngagementId = item.engagementId || data.engagements.find(e => e.clientId === item.clientId && e.status === 'Active' && e.serviceName)?.id || null;
     const newItem: BusinessPayment = {
       ...item,
       id: generateId(),
