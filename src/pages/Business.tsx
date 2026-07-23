@@ -280,6 +280,7 @@ function ClientsView({ clients, onEdit }: ClientsViewProps) {
           <tr className="text-xs uppercase text-gray-500 tracking-wider border-b border-gray-200">
             <th className="pb-2 p-4 md:p-6 font-semibold">Client Name</th>
             <th className="pb-2 p-4 md:p-6 font-semibold hidden md:table-cell">Services</th>
+            <th className="pb-2 p-4 md:p-6 font-semibold">Budget</th>
             <th className="pb-2 p-4 md:p-6 font-semibold hidden md:table-cell">Contact</th>
             <th className="pb-2 p-4 md:p-6 font-semibold">Status</th>
           </tr>
@@ -299,6 +300,7 @@ function ClientsView({ clients, onEdit }: ClientsViewProps) {
                   ))}
                 </div>
               </td>
+              <td className="p-4 md:p-6"><span className="tabular font-semibold">{formatCurrency(c.budget)}</span></td>
               <td className="p-4 md:p-6 hidden md:table-cell text-gray-900">{c.contact}</td>
               <td className="p-4 md:p-6">
                 <Badge variant={c.status === 'Active' ? 'success' : c.status === 'Paused' ? 'warning' : 'danger'}>{c.status}</Badge>
@@ -720,12 +722,13 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
   const [businessName, setBusinessName] = useState('');
   const [services, setServices] = useState<string[]>([]);
   const [status, setStatus] = useState<'Active' | 'Paused' | 'Churned'>('Active');
+  const [budget, setBudget] = useState('');
 
   useEffect(() => {
     if (editItem) {
-      setName(editItem.name); setBrand(editItem.brand); setContact(editItem.contact); setMail(editItem.mail); setAddress(editItem.address); setBusinessName(editItem.businessName); setServices(editItem.services); setStatus(editItem.status);
+      setName(editItem.name); setBrand(editItem.brand); setContact(editItem.contact); setMail(editItem.mail); setAddress(editItem.address); setBusinessName(editItem.businessName); setServices(editItem.services); setStatus(editItem.status); setBudget(editItem.budget ? editItem.budget.toString() : '');
     } else {
-      setName(''); setBrand('Infinity Innovations'); setContact(''); setMail(''); setAddress(''); setBusinessName(''); setServices([]); setStatus('Active');
+      setName(''); setBrand('Infinity Innovations'); setContact(''); setMail(''); setAddress(''); setBusinessName(''); setServices([]); setStatus('Active'); setBudget('');
     }
   }, [editItem, isOpen]);
 
@@ -737,9 +740,9 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
     e.preventDefault();
     if (!name) return;
     if (editItem && onUpdate) {
-      onUpdate(editItem.id, { name, brand, contact, mail, address, businessName, services, status });
+      onUpdate(editItem.id, { name, brand, contact, mail, address, businessName, services, status, budget: parseFloat(budget) || 0 });
     } else {
-      onSave({ name, brand, contact, mail, address, businessName, services, status });
+      onSave({ name, brand, contact, mail, address, businessName, services, status, budget: parseFloat(budget) || 0 });
     }
     onClose();
   };
@@ -784,6 +787,7 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
             ))}
           </div>
         </div>
+        <div><Label>Project Budget (₹)</Label><Input type="number" step="0.01" value={budget} onChange={e => setBudget(e.target.value)} placeholder="0" /></div>
         <Button type="submit" className="w-full mt-4">{editItem ? 'Update Client' : 'Save Client'}</Button>
       </form>
     </Modal>

@@ -62,6 +62,7 @@ export interface Client {
   businessName?: string;
   services: string[];
   status: 'Active' | 'Paused' | 'Churned';
+  budget: number;
   createdAt: string;
   userId?: string;
 }

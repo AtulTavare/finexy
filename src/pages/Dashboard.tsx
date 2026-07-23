@@ -134,6 +134,39 @@ export default function Dashboard() {
         <MetricCard title="Net Debt" value={netDebt} isDebt />
       </section>
 
+      <Card className="p-4 md:p-6 bg-white">
+        <h2 className="text-sm font-semibold text-gray-900 mb-4">Receivables Breakdown</h2>
+        {data.clients.filter(c => c.budget > 0).length === 0 ? (
+          <p className="text-xs text-gray-400 italic">Set a budget when adding a client to track receivables.</p>
+        ) : (
+          <div className="space-y-3">
+            {data.clients.filter(c => c.budget > 0).map(client => {
+              const eng = data.engagements.find(e => e.clientId === client.id && e.status === 'Active');
+              const paid = eng ? data.businessPayments.filter(p => p.engagementId === eng.id).reduce((s, p) => s + p.amount, 0) : 0;
+              const remaining = Math.max(0, client.budget - paid);
+              const pct = client.budget > 0 ? Math.min(paid / client.budget, 1) : 0;
+              return (
+                <div key={client.id} className="flex flex-col space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-medium text-gray-900">{client.name}</span>
+                    <span className="tabular text-gray-500">{formatCurrency(paid)} of {formatCurrency(client.budget)}</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="bg-emerald-500 h-2 rounded-full transition-all" style={{ width: `${pct * 100}%` }} />
+                  </div>
+                  <div className="flex justify-between text-[10px]">
+                    <span className={remaining > 0 ? 'text-orange-600 font-semibold' : 'text-emerald-600 font-semibold'}>
+                      {remaining > 0 ? `${formatCurrency(remaining)} remaining` : 'Fully paid'}
+                    </span>
+                    <span className="text-gray-400">{Math.round(pct * 100)}%</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <Card className="p-4 md:p-6 bg-white">
