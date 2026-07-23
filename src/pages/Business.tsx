@@ -660,10 +660,10 @@ function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSav
                   )}
                   <span className="font-semibold text-gray-800">{Math.round(projectedProgress * 100)}%</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2 relative">
-                  <div className="bg-emerald-500 h-2 rounded-full transition-all" style={{ width: `${progress * 100}%` }} />
-                  {amountNum > 0 && (
-                    <div className="absolute inset-0 h-2 rounded-full transition-all" style={{ width: `${projectedProgress * 100}%`, background: 'linear-gradient(90deg, transparent 0%, #f97316 50%, #f97316 100%)', mask: `linear-gradient(90deg, black ${progress * 100}%, transparent ${progress * 100}%)`, WebkitMask: `linear-gradient(90deg, black ${progress * 100}%, transparent ${progress * 100}%)` }} />
+                <div className="w-full bg-orange-300/50 rounded-full h-2 overflow-hidden flex">
+                  <div className="bg-emerald-500 h-2 transition-all" style={{ width: `${progress * 100}%` }} />
+                  {amountNum > 0 && projectedProgress > progress && (
+                    <div className="bg-orange-500 h-2 transition-all" style={{ width: `${(projectedProgress - progress) * 100}%` }} />
                   )}
                 </div>
               </div>

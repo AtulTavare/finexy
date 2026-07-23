@@ -164,15 +164,15 @@ export default function Dashboard() {
                             <span className="text-gray-600">{s.name} ({s.billing})</span>
                             <span className="tabular text-gray-500">{formatCurrency(sPaid)} of {formatCurrency(s.price)}</span>
                           </div>
-                          <div className="w-full bg-gray-100 rounded-full h-1.5 mt-0.5">
-                            <div className="bg-emerald-400 h-1.5 rounded-full transition-all" style={{ width: `${sPct * 100}%` }} />
+                  <div className="w-full bg-orange-300/30 rounded-full h-1.5 mt-0.5 overflow-hidden flex">
+                    <div className="bg-emerald-400 h-1.5 transition-all" style={{ width: `${sPct * 100}%` }} />
                           </div>
                         </div>
                       );
                     })}
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-emerald-500 h-2 rounded-full transition-all" style={{ width: `${pct * 100}%` }} />
+                  <div className="w-full bg-orange-300/50 rounded-full h-2 overflow-hidden flex">
+                    <div className="bg-emerald-500 h-2 transition-all" style={{ width: `${pct * 100}%` }} />
                   </div>
                   <div className="flex justify-between text-[10px]">
                     <span className={remaining > 0 ? 'text-orange-600 font-semibold' : 'text-emerald-600 font-semibold'}>

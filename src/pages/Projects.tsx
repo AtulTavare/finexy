@@ -80,8 +80,8 @@ export default function Projects() {
                                 <div className="text-[9px] text-orange-500 font-medium">Starts {format(new Date(svc.startDate), 'MMM d')}</div>
                               ) : eng ? (
                                 <div className="space-y-0.5 mt-1">
-                                  <div className="w-full bg-gray-200 rounded-full h-1">
-                                    <div className="bg-emerald-500 h-1 rounded-full" style={{ width: `${pct * 100}%` }} />
+                                  <div className="w-full bg-orange-300/50 rounded-full h-1 overflow-hidden flex">
+                                    <div className="bg-emerald-500 h-1 transition-all" style={{ width: `${pct * 100}%` }} />
                                   </div>
                                   <div className="flex justify-between text-[9px] text-gray-500">
                                     <span>{formatCurrency(paid)} collected</span>
