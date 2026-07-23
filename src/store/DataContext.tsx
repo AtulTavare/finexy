@@ -35,7 +35,7 @@ interface DataContextType extends PulseData {
   addEngagement: (item: Omit<Engagement, 'id' | 'createdAt'>) => void;
   updateEngagement: (id: string, updates: Partial<Engagement>) => void;
   deleteEngagement: (id: string) => void;
-  addBusinessPayment: (item: Omit<BusinessPayment, 'id' | 'createdAt' | 'engagementId'>) => void;
+  addBusinessPayment: (item: Omit<BusinessPayment, 'id' | 'createdAt'> & { engagementId?: string }) => void;
   updateBusinessPayment: (id: string, updates: Partial<BusinessPayment>) => void;
   deleteBusinessPayment: (id: string) => void;
   addBusinessExpense: (item: Omit<BusinessExpense, 'id' | 'createdAt'>) => void;
@@ -406,13 +406,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (!ok && prev) setArray('engagements', (prevArr) => [prev, ...prevArr]);
   };
 
-  const addBusinessPayment = async (item: Omit<BusinessPayment, 'id' | 'createdAt' | 'engagementId'>) => {
-    const activeEngagement = data.engagements.find(e => e.clientId === item.clientId && e.status === 'Active');
+  const addBusinessPayment = async (item: Omit<BusinessPayment, 'id' | 'createdAt'> & { engagementId?: string }) => {
+    const resolvedEngagementId = item.engagementId || data.engagements.find(e => e.clientId === item.clientId && e.status === 'Active')?.id || null;
     const newItem: BusinessPayment = {
       ...item,
       id: generateId(),
       createdAt: new Date().toISOString(),
-      engagementId: activeEngagement?.id || null,
+      engagementId: resolvedEngagementId,
     };
     setArray('businessPayments', (prev) => [newItem, ...prev]);
     const ok = await dbInsert('business_payments', newItem);
@@ -501,21 +501,38 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setArray('projects', (prev) => [newItem, ...prev]);
     const ok = await dbInsert('projects', newItem);
     if (!ok) setArray('projects', (prev) => prev.filter((p) => p.id !== newItem.id));
-    if (ok && item.budget > 0) {
+    if (ok) {
       const client = data.clients.find(c => c.id === item.clientId);
-      const engagement: Engagement = {
-        id: generateId(),
-        clientId: item.clientId,
-        brand: client?.brand || 'Infinity Innovations',
-        type: 'Project',
-        value: item.budget,
-        paymentTerms: 'Milestones',
-        startDate: format(new Date(item.startDate || new Date()), 'yyyy-MM-dd'),
-        status: 'Active',
-        createdAt: new Date().toISOString(),
-      };
-      setArray('engagements', (prev) => [engagement, ...prev]);
-      await dbInsert('engagements', engagement);
+      if (item.oneTimeBudget > 0) {
+        const engagement: Engagement = {
+          id: generateId(),
+          clientId: item.clientId,
+          brand: client?.brand || 'Infinity Innovations',
+          type: 'Project',
+          value: item.oneTimeBudget,
+          paymentTerms: 'Milestones',
+          startDate: format(new Date(item.startDate || new Date()), 'yyyy-MM-dd'),
+          status: 'Active',
+          createdAt: new Date().toISOString(),
+        };
+        setArray('engagements', (prev) => [engagement, ...prev]);
+        await dbInsert('engagements', engagement);
+      }
+      if (item.monthlyBudget > 0) {
+        const engagement: Engagement = {
+          id: generateId(),
+          clientId: item.clientId,
+          brand: client?.brand || 'Infinity Innovations',
+          type: 'Retainer',
+          value: item.monthlyBudget,
+          paymentTerms: 'Monthly',
+          startDate: format(new Date(item.startDate || new Date()), 'yyyy-MM-dd'),
+          status: 'Active',
+          createdAt: new Date().toISOString(),
+        };
+        setArray('engagements', (prev) => [engagement, ...prev]);
+        await dbInsert('engagements', engagement);
+      }
     }
   };
 
@@ -524,21 +541,45 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setArray('projects', (prevArr) => prevArr.map((p) => (p.id === id ? { ...p, ...updates } : p)));
     const ok = await dbUpdate('projects', id, updates);
     if (!ok && prev) setArray('projects', (prevArr) => prevArr.map((p) => (p.id === id ? prev : p)));
-    if (ok && updates.budget !== undefined) {
-      const activeEng = data.engagements.find(e => e.clientId === (prev?.clientId || id) && e.status === 'Active');
+    const clientId = prev?.clientId || id;
+    if (ok && updates.oneTimeBudget !== undefined) {
+      const activeEng = data.engagements.find(e => e.clientId === clientId && e.status === 'Active' && e.type === 'Project');
       if (activeEng) {
         const prevEng = data.engagements.find(e => e.id === activeEng.id);
-        setArray('engagements', (prevArr) => prevArr.map((e) => (e.id === activeEng.id ? { ...e, value: updates.budget! } : e)));
-        const engOk = await dbUpdate('engagements', activeEng.id, { value: updates.budget });
+        setArray('engagements', (prevArr) => prevArr.map((e) => (e.id === activeEng.id ? { ...e, value: updates.oneTimeBudget! } : e)));
+        const engOk = await dbUpdate('engagements', activeEng.id, { value: updates.oneTimeBudget });
         if (!engOk && prevEng) setArray('engagements', (prevArr) => prevArr.map((e) => (e.id === activeEng.id ? prevEng : e)));
-      } else if (updates.budget > 0) {
+      } else if (updates.oneTimeBudget > 0) {
         const newEng: Engagement = {
           id: generateId(),
-          clientId: prev?.clientId || id,
-          brand: prev?.services?.[0] ? 'Infinity Innovations' : 'Infinity Innovations',
+          clientId,
+          brand: 'Infinity Innovations',
           type: 'Project',
-          value: updates.budget,
+          value: updates.oneTimeBudget,
           paymentTerms: 'Milestones',
+          startDate: new Date().toISOString().slice(0, 10),
+          status: 'Active',
+          createdAt: new Date().toISOString(),
+        };
+        setArray('engagements', (prev) => [newEng, ...prev]);
+        await dbInsert('engagements', newEng);
+      }
+    }
+    if (ok && updates.monthlyBudget !== undefined) {
+      const activeEng = data.engagements.find(e => e.clientId === clientId && e.status === 'Active' && e.type === 'Retainer');
+      if (activeEng) {
+        const prevEng = data.engagements.find(e => e.id === activeEng.id);
+        setArray('engagements', (prevArr) => prevArr.map((e) => (e.id === activeEng.id ? { ...e, value: updates.monthlyBudget! } : e)));
+        const engOk = await dbUpdate('engagements', activeEng.id, { value: updates.monthlyBudget });
+        if (!engOk && prevEng) setArray('engagements', (prevArr) => prevArr.map((e) => (e.id === activeEng.id ? prevEng : e)));
+      } else if (updates.monthlyBudget > 0) {
+        const newEng: Engagement = {
+          id: generateId(),
+          clientId,
+          brand: 'Infinity Innovations',
+          type: 'Retainer',
+          value: updates.monthlyBudget,
+          paymentTerms: 'Monthly',
           startDate: new Date().toISOString().slice(0, 10),
           status: 'Active',
           createdAt: new Date().toISOString(),

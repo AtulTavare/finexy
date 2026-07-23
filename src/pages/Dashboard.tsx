@@ -136,22 +136,25 @@ export default function Dashboard() {
 
       <Card className="p-4 md:p-6 bg-white">
         <h2 className="text-sm font-semibold text-gray-900 mb-4">Receivables by Project</h2>
-        {data.projects.filter(p => p.budget > 0).length === 0 ? (
-          <p className="text-xs text-gray-400 italic">Set a budget when adding a project to track receivables.</p>
+        {data.projects.filter(p => p.oneTimeBudget + p.monthlyBudget > 0).length === 0 ? (
+          <p className="text-xs text-gray-400 italic">Set service pricing when adding a project to track receivables.</p>
         ) : (
           <div className="space-y-3">
-            {data.projects.filter(p => p.budget > 0).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(project => {
+            {data.projects.filter(p => p.oneTimeBudget + p.monthlyBudget > 0).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(project => {
               const client = data.clients.find(c => c.id === project.clientId);
-              const eng = data.engagements.find(e => e.clientId === project.clientId && e.status === 'Active');
-              const paid = eng ? data.businessPayments.filter(p => p.engagementId === eng.id).reduce((s, p) => s + p.amount, 0) : 0;
-              const remaining = Math.max(0, project.budget - paid);
-              const pct = project.budget > 0 ? Math.min(paid / project.budget, 1) : 0;
+              const totalBudget = project.oneTimeBudget + project.monthlyBudget;
+              const engs = data.engagements.filter(e => e.clientId === project.clientId && e.status === 'Active');
+              const paid = engs.reduce((sum, eng) => sum + data.businessPayments.filter(p => p.engagementId === eng.id).reduce((s, p) => s + p.amount, 0), 0);
+              const remaining = Math.max(0, totalBudget - paid);
+              const pct = totalBudget > 0 ? Math.min(paid / totalBudget, 1) : 0;
               return (
                 <div key={project.id} className="flex flex-col space-y-1">
                   <div className="flex justify-between text-xs">
                     <span className="font-medium text-gray-900">{project.title} <span className="text-gray-400 font-normal">{client?.name ? `(${client.name})` : ''}</span></span>
-                    <span className="tabular text-gray-500">{formatCurrency(paid)} of {formatCurrency(project.budget)}</span>
+                    <span className="tabular text-gray-500">{formatCurrency(paid)} of {formatCurrency(totalBudget)}</span>
                   </div>
+                  {project.oneTimeBudget > 0 && <div className="text-[10px] text-gray-500">One-time: {formatCurrency(project.oneTimeBudget)}</div>}
+                  {project.monthlyBudget > 0 && <div className="text-[10px] text-gray-500">Monthly: {formatCurrency(project.monthlyBudget)}/mo</div>}
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div className="bg-emerald-500 h-2 rounded-full transition-all" style={{ width: `${pct * 100}%` }} />
                   </div>

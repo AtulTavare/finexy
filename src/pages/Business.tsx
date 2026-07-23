@@ -500,7 +500,7 @@ function LeadModal({ isOpen, onClose, onSave, onUpdate, editItem }: LeadModalPro
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSaveIncoming: (item: Omit<BusinessPayment, 'id' | 'createdAt' | 'engagementId'>) => void;
+  onSaveIncoming: (item: Omit<BusinessPayment, 'id' | 'createdAt'> & { engagementId?: string }) => void;
   onUpdateIncoming?: (id: string, updates: Partial<BusinessPayment>) => void;
   onSaveOutgoing: (item: Omit<BusinessExpense, 'id' | 'createdAt'>) => void;
   onUpdateOutgoing?: (id: string, updates: Partial<BusinessExpense>) => void;
@@ -514,6 +514,7 @@ function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSav
   const [type, setType] = useState<'incoming' | 'outgoing'>('incoming');
   
   const [clientId, setClientId] = useState('');
+  const [selectedEngagementId, setSelectedEngagementId] = useState<string>('');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date());
   const [invoiceReference, setInvoiceReference] = useState('');
@@ -521,24 +522,30 @@ function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSav
   const [brand, setBrand] = useState<Brand>('Infinity Innovations');
   const [category, setCategory] = useState<BusinessExpense['category']>('Tools');
 
-  const activeEngagement = engagements.find((e: any) => e.clientId === clientId && e.status === 'Active');
-  const collected = activeEngagement
-    ? payments.filter((p: any) => p.engagementId === activeEngagement.id).reduce((s: number, p: any) => s + p.amount, 0)
+  const activeEngagements = engagements.filter((e: any) => e.clientId === clientId && e.status === 'Active');
+  const currentEngagement = activeEngagements.find((e: any) => e.id === selectedEngagementId) || activeEngagements[0];
+  const collected = currentEngagement
+    ? payments.filter((p: any) => p.engagementId === currentEngagement.id).reduce((s: number, p: any) => s + p.amount, 0)
     : 0;
-  const progress = activeEngagement ? Math.min(collected / activeEngagement.value, 1) : 0;
+  const progress = currentEngagement ? Math.min(collected / currentEngagement.value, 1) : 0;
 
   useEffect(() => {
     if (editItem) {
       setType('incoming');
       setClientId(editItem.clientId);
+      setSelectedEngagementId(editItem.engagementId || '');
       setAmount(editItem.amount.toString());
       setDate(new Date(editItem.date));
       setInvoiceReference(editItem.invoiceReference);
     } else {
       setType('incoming');
-      setClientId(''); setAmount(''); setDate(new Date()); setInvoiceReference(''); setBrand('Infinity Innovations'); setCategory('Tools');
+      setClientId(''); setSelectedEngagementId(''); setAmount(''); setDate(new Date()); setInvoiceReference(''); setBrand('Infinity Innovations'); setCategory('Tools');
     }
   }, [editItem, isOpen]);
+
+  useEffect(() => {
+    setSelectedEngagementId('');
+  }, [clientId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -550,7 +557,7 @@ function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSav
       } else {
         if (!clientId) return;
         const client = clients.find((c: any) => c.id === clientId);
-        onSaveIncoming({ clientId, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd'), invoiceReference, brand: client?.brand || 'Infinity Innovations' });
+        onSaveIncoming({ clientId, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd'), invoiceReference, brand: client?.brand || 'Infinity Innovations', engagementId: selectedEngagementId || undefined });
       }
     } else {
       onSaveOutgoing({ brand, category, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd') });
@@ -589,10 +596,24 @@ function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSav
                 {clients.map((c: any) => <option key={c.id} value={c.id}>{c.name} ({c.brand})</option>)}
               </Select>
             </div>
-            {clientId && activeEngagement ? (
-              <div className="bg-gray-50 rounded-xl p-3 space-y-1">
+            {clientId && activeEngagements.length > 0 ? (
+              <div className="bg-gray-50 rounded-xl p-3 space-y-2">
+                {activeEngagements.length > 1 && (
+                  <div className="flex gap-2">
+                    {activeEngagements.map((e: any) => (
+                      <button
+                        key={e.id}
+                        type="button"
+                        className={`flex-1 px-3 py-1.5 text-[10px] font-semibold rounded-lg transition-all ${selectedEngagementId === e.id || (!selectedEngagementId && activeEngagements[0].id === e.id) ? 'bg-[#18181b] text-white shadow-sm' : 'bg-white text-gray-500 border border-gray-200'}`}
+                        onClick={() => setSelectedEngagementId(e.id)}
+                      >
+                        {e.type === 'Project' ? 'Project Fee' : 'Monthly Retainer'}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <div className="flex justify-between text-xs">
-                  <span className="text-gray-500">{formatCurrency(collected)} collected of {formatCurrency(activeEngagement.value)}</span>
+                  <span className="text-gray-500">{formatCurrency(collected)} collected of {formatCurrency(currentEngagement?.value || 0)}</span>
                   <span className="font-semibold text-gray-800">{Math.round(progress * 100)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">

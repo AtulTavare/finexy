@@ -116,14 +116,23 @@ export interface Task {
   userId?: string;
 }
 
+export interface ServicePricing {
+  name: string;
+  price: number;
+  billing: 'one-time' | 'monthly';
+}
+
 export interface Project {
   id: string;
   clientId: string;
   title: string;
   services: string[];
+  servicePricing: ServicePricing[];
   startDate: string;
   deadline: string;
   budget: number;
+  oneTimeBudget: number;
+  monthlyBudget: number;
   status: 'Not Started' | 'In Progress' | 'Under Review' | 'Completed';
   createdAt: string;
   userId?: string;

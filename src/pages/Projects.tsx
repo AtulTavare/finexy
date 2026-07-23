@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useData } from '../store/DataContext';
 import { Card, Button, Input, Label, Modal, Badge, DatePicker } from '../components/ui';
-import { Client, Project } from '../types';
+import { Client, Project, ServicePricing } from '../types';
 import { format } from 'date-fns';
 import { formatCurrency } from '../lib/utils';
 
@@ -62,15 +62,19 @@ export default function Projects() {
                       <span className="text-gray-900">Timeline</span>
                       <span>{format(new Date(p.startDate), 'MMM d')} - {format(new Date(p.deadline), 'MMM d')}</span>
                     </div>
-                    {p.budget > 0 && (() => {
-                      const eng = engagements.find(e => e.clientId === p.clientId && e.status === 'Active');
-                      const paid = eng ? businessPayments.filter(bp => bp.engagementId === eng.id).reduce((s, bp) => s + bp.amount, 0) : 0;
-                      const pct = Math.min(paid / p.budget, 1);
+                    {(() => {
+                      const totalBudget = p.oneTimeBudget + p.monthlyBudget;
+                      if (totalBudget <= 0) return null;
+                      const engs = engagements.filter(e => e.clientId === p.clientId && e.status === 'Active');
+                      const paid = engs.reduce((sum, eng) => sum + businessPayments.filter(bp => bp.engagementId === eng.id).reduce((s, bp) => s + bp.amount, 0), 0);
+                      const pct = Math.min(paid / totalBudget, 1);
                       return (
                         <div className="space-y-1 pt-2">
+                          {p.oneTimeBudget > 0 && <div className="text-[10px] text-gray-500">One-time: {formatCurrency(p.oneTimeBudget)}</div>}
+                          {p.monthlyBudget > 0 && <div className="text-[10px] text-gray-500">Monthly: {formatCurrency(p.monthlyBudget)}/mo</div>}
                           <div className="flex justify-between text-[10px]">
                             <span className="text-gray-500">{formatCurrency(paid)} collected</span>
-                            <span className="font-semibold">{formatCurrency(p.budget)} budget</span>
+                            <span className="font-semibold">{formatCurrency(totalBudget)} total</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-1.5">
                             <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${pct * 100}%` }} />
@@ -123,32 +127,52 @@ interface ProjectModalProps {
 function ProjectModal({ isOpen, onClose, onSave, onUpdate, clients, editItem }: ProjectModalProps) {
   const [title, setTitle] = useState('');
   const [clientId, setClientId] = useState('');
-  const [services, setServices] = useState<string[]>([]);
+  const [servicePricing, setServicePricing] = useState<ServicePricing[]>([]);
   const [startDate, setStartDate] = useState(new Date());
   const [deadline, setDeadline] = useState(new Date());
   const [status, setStatus] = useState<'Not Started' | 'In Progress' | 'Under Review' | 'Completed'>('Not Started');
-  const [budget, setBudget] = useState('');
+
+  const oneTimeTotal = useMemo(() => servicePricing.filter(s => s.billing === 'one-time').reduce((sum, s) => sum + s.price, 0), [servicePricing]);
+  const monthlyTotal = useMemo(() => servicePricing.filter(s => s.billing === 'monthly').reduce((sum, s) => sum + s.price, 0), [servicePricing]);
 
   useEffect(() => {
     if (editItem) {
-      setTitle(editItem.title); setClientId(editItem.clientId); setServices(editItem.services); setStartDate(new Date(editItem.startDate)); setDeadline(new Date(editItem.deadline)); setStatus(editItem.status); setBudget(editItem.budget ? editItem.budget.toString() : '');
+      setTitle(editItem.title);
+      setClientId(editItem.clientId);
+      setServicePricing(editItem.servicePricing || []);
+      setStartDate(new Date(editItem.startDate));
+      setDeadline(new Date(editItem.deadline));
+      setStatus(editItem.status);
     } else {
-      setTitle(''); setClientId(''); setServices([]); setStartDate(new Date()); setDeadline(new Date()); setStatus('Not Started'); setBudget('');
+      setTitle(''); setClientId(''); setServicePricing([]); setStartDate(new Date()); setDeadline(new Date()); setStatus('Not Started');
     }
   }, [editItem, isOpen]);
 
   const toggleService = (s: string) => {
-    setServices(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
+    setServicePricing(prev => {
+      const existing = prev.find(p => p.name === s);
+      if (existing) return prev.filter(p => p.name !== s);
+      return [...prev, { name: s, price: 0, billing: 'one-time' }];
+    });
+  };
+
+  const updatePrice = (name: string, price: number) => {
+    setServicePricing(prev => prev.map(p => p.name === name ? { ...p, price } : p));
+  };
+
+  const updateBilling = (name: string, billing: 'one-time' | 'monthly') => {
+    setServicePricing(prev => prev.map(p => p.name === name ? { ...p, billing } : p));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title) return;
+    const services = servicePricing.map(s => s.name);
     if (editItem && onUpdate) {
-      onUpdate(editItem.id, { title, services, startDate: format(startDate, 'yyyy-MM-dd'), deadline: format(deadline, 'yyyy-MM-dd'), status, budget: parseFloat(budget) || 0 });
+      onUpdate(editItem.id, { title, services, servicePricing, startDate: format(startDate, 'yyyy-MM-dd'), deadline: format(deadline, 'yyyy-MM-dd'), status, budget: 0, oneTimeBudget: oneTimeTotal, monthlyBudget: monthlyTotal });
     } else {
       if (!clientId) return;
-      onSave({ title, clientId, services, startDate: format(startDate, 'yyyy-MM-dd'), deadline: format(deadline, 'yyyy-MM-dd'), status, budget: parseFloat(budget) || 0 });
+      onSave({ title, clientId, services, servicePricing, startDate: format(startDate, 'yyyy-MM-dd'), deadline: format(deadline, 'yyyy-MM-dd'), status, budget: 0, oneTimeBudget: oneTimeTotal, monthlyBudget: monthlyTotal });
     }
     onClose();
   };
@@ -186,22 +210,58 @@ function ProjectModal({ isOpen, onClose, onSave, onUpdate, clients, editItem }: 
             <option value="Completed">Completed</option>
           </select>
         </div>
-        <div><Label>Project Budget (₹)</Label><Input type="number" step="0.01" value={budget} onChange={e => setBudget(e.target.value)} placeholder="0" /></div>
         <div>
-          <Label>Services</Label>
-          <div className="mt-2 grid grid-cols-2 gap-2 max-h-40 overflow-y-auto no-scrollbar p-2 border border-gray-200 bg-white rounded-md">
-            {SERVICES_OFFERED.map(s => (
-              <label key={s} className="flex items-center space-x-2 text-xs text-gray-800">
-                <input 
-                  type="checkbox" 
-                  checked={services.includes(s)}
-                  onChange={() => toggleService(s)}
-                  className="rounded border-gray-200 bg-white text-green-500 focus:ring-green-400"
-                />
-                <span>{s}</span>
-              </label>
-            ))}
+          <Label>Services &amp; Pricing</Label>
+          <div className="mt-2 space-y-2 max-h-48 overflow-y-auto no-scrollbar p-3 border border-gray-200 bg-white rounded-md">
+            {SERVICES_OFFERED.map(s => {
+              const pricing = servicePricing.find(p => p.name === s);
+              return (
+                <div key={s} className="flex items-center gap-2 text-xs flex-wrap">
+                  <input 
+                    type="checkbox" 
+                    checked={!!pricing}
+                    onChange={() => toggleService(s)}
+                    className="rounded border-gray-200 bg-white text-green-500 focus:ring-green-400 shrink-0"
+                  />
+                  <span className="text-gray-800 min-w-[100px]">{s}</span>
+                  {pricing && (
+                    <>
+                      <span className="text-gray-400">₹</span>
+                      <input
+                        type="number"
+                        value={pricing.price || ''}
+                        onChange={e => updatePrice(s, parseFloat(e.target.value) || 0)}
+                        placeholder="0"
+                        className="w-20 bg-gray-50 border border-gray-200 rounded px-2 py-1 text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                      />
+                      <div className="flex bg-gray-100 rounded-md p-0.5">
+                        <button
+                          type="button"
+                          className={`px-2 py-1 text-[10px] rounded font-medium transition-all ${pricing.billing === 'one-time' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+                          onClick={() => updateBilling(s, 'one-time')}
+                        >
+                          One-time
+                        </button>
+                        <button
+                          type="button"
+                          className={`px-2 py-1 text-[10px] rounded font-medium transition-all ${pricing.billing === 'monthly' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+                          onClick={() => updateBilling(s, 'monthly')}
+                        >
+                          Monthly
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
           </div>
+          {servicePricing.length > 0 && (
+            <div className="flex justify-between text-xs font-semibold text-gray-900 mt-2 px-1">
+              <span>One-time: ₹{oneTimeTotal.toLocaleString('en-IN')}</span>
+              <span>Monthly: ₹{monthlyTotal.toLocaleString('en-IN')}/mo</span>
+            </div>
+          )}
         </div>
         
         <Button type="submit" className="w-full mt-4">{editItem ? 'Update Project' : 'Save Project'}</Button>
