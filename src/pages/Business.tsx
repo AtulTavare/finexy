@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useData } from '../store/DataContext';
-import { Card, Button, Input, Select, Label, Modal, Badge, DatePicker } from '../components/ui';
+import { Card, Button, Input, Select, Label, Modal, Badge, DatePicker, ConfirmDialog } from '../components/ui';
 import { formatCurrency } from '../lib/utils';
 import { Brand, Lead, Client, Engagement, BusinessPayment, BusinessExpense } from '../types';
 import { format } from 'date-fns';
@@ -162,6 +162,7 @@ interface PipelineViewProps {
 function PipelineView({ leads, updateLead, deleteLead, onEdit }: PipelineViewProps) {
   const stages = ['Lead', 'Qualified', 'Proposal Sent', 'Negotiation', 'Won', 'Lost'];
   const [stageFilter, setStageFilter] = useState('All');
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const filteredLeads = stageFilter === 'All' ? leads : leads.filter(l => l.stage === stageFilter);
 
@@ -191,13 +192,13 @@ function PipelineView({ leads, updateLead, deleteLead, onEdit }: PipelineViewPro
                   )}
                   <div className="flex items-center space-x-1 pt-1.5 border-t border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity">
                     <select
-                      className="text-[9px] bg-gray-100 border-none text-gray-900 py-0.5 px-1 rounded cursor-pointer"
-                      value={l.stage}
-                      onChange={(e) => updateLead(l.id, { stage: e.target.value })}
-                    >
-                      {stages.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                    <button onClick={() => { deleteLead(l.id) }} className="text-red-500 text-[9px] hover:underline cursor-pointer ml-auto">Delete</button>
+                          className="text-[9px] bg-gray-100 border-none text-gray-900 py-0.5 px-1 rounded cursor-pointer"
+                          value={l.stage}
+                          onChange={(e) => updateLead(l.id, { stage: e.target.value })}
+                        >
+                          {stages.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                        <button onClick={() => { setDeleteTarget({ id: l.id, name: l.name }) }} className="text-red-500 text-[9px] hover:underline cursor-pointer ml-auto">Delete</button>
                   </div>
                 </div>
               ))}
@@ -242,14 +243,14 @@ function PipelineView({ leads, updateLead, deleteLead, onEdit }: PipelineViewPro
                 <div className="text-[10px] text-gray-500 mb-2">Next: {l.nextAction} ({format(new Date(l.nextActionDate), 'MMM d')})</div>
               )}
               <div className="flex items-center space-x-2 pt-2 border-t border-gray-100">
-                <select
-                  className="text-[10px] bg-gray-100 border-none text-gray-900 py-1 px-2 rounded cursor-pointer"
-                  value={l.stage}
-                  onChange={(e) => updateLead(l.id, { stage: e.target.value })}
-                >
-                  {stages.map(s => <option key={s} value={s}>Move to {s}</option>)}
-                </select>
-                <button onClick={() => { deleteLead(l.id) }} className="text-red-500 text-[10px] hover:underline cursor-pointer ml-auto">Delete</button>
+                  <select
+                    className="text-[10px] bg-gray-100 border-none text-gray-900 py-1 px-2 rounded cursor-pointer"
+                    value={l.stage}
+                    onChange={(e) => updateLead(l.id, { stage: e.target.value })}
+                  >
+                    {stages.map(s => <option key={s} value={s}>Move to {s}</option>)}
+                  </select>
+                  <button onClick={() => { setDeleteTarget({ id: l.id, name: l.name }) }} className="text-red-500 text-[10px] hover:underline cursor-pointer ml-auto">Delete</button>
               </div>
             </div>
           ))}
@@ -262,6 +263,13 @@ function PipelineView({ leads, updateLead, deleteLead, onEdit }: PipelineViewPro
     <>
       {renderKanban()}
       {renderList()}
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Delete Lead"
+        message={`Are you sure you want to delete the lead "${deleteTarget?.name}"?`}
+        onConfirm={() => { if (deleteTarget) deleteLead(deleteTarget.id); setDeleteTarget(null); }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </>
   );
 }
@@ -359,6 +367,7 @@ interface PaymentsViewProps {
 }
 
 function PaymentsView({ payments, clients, engagements, deletePayment, onEdit }: PaymentsViewProps) {
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   if (payments.length === 0) return <div className="text-gray-900 italic">No payments recorded yet.</div>;
   return (
     <Card className="p-0 bg-white">
@@ -374,22 +383,31 @@ function PaymentsView({ payments, clients, engagements, deletePayment, onEdit }:
         <tbody>
           {payments.map((p: any) => {
             const client = clients.find((c: any) => c.id === p.clientId);
+            const eng = engagements.find((e: any) => e.id === p.engagementId);
             return (
               <tr key={p.id} className="border-b border-gray-200 hover:bg-gray-50 cursor-pointer" onClick={() => onEdit(p)}>
                 <td className="p-4 md:p-6 text-gray-900">{format(new Date(p.date), 'MMM d, yyyy')}</td>
                 <td className="p-4 md:p-6">
                   <div className="font-medium">{client?.name || 'Unknown'} <Badge className="ml-2">{p.brand}</Badge></div>
                   <div className="text-[10px] text-gray-900 mt-1">Ref: {p.invoiceReference}</div>
+                  {eng?.serviceName && <div className="text-[10px] text-gray-500 mt-0.5">{eng.serviceName}</div>}
                 </td>
                 <td className="p-4 md:p-6 text-right tabular text-emerald-500 font-semibold">+{formatCurrency(p.amount)}</td>
                 <td className="p-4 md:p-6 text-right">
-                  <button onClick={(e) => { e.stopPropagation(); deletePayment(p.id); }} className="text-gray-900 hover:text-red-500 p-1 cursor-pointer"><Trash2 size={14} /></button>
+                  <button onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: p.id, name: `${formatCurrency(p.amount)} payment` }); }} className="text-gray-900 hover:text-red-500 p-1 cursor-pointer"><Trash2 size={14} /></button>
                 </td>
               </tr>
             );
           })}
         </tbody>
       </table>
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Delete Payment"
+        message={`Are you sure you want to delete the ${deleteTarget?.name}?`}
+        onConfirm={() => { if (deleteTarget) deletePayment(deleteTarget.id); setDeleteTarget(null); }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </Card>
   );
 }
@@ -401,6 +419,7 @@ interface ExpensesViewProps {
 }
 
 function ExpensesView({ expenses, deleteExpense, onEdit }: ExpensesViewProps) {
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   if (expenses.length === 0) return <div className="text-gray-900 italic">No business expenses recorded yet.</div>;
   return (
     <Card className="p-0 bg-white">
@@ -423,12 +442,19 @@ function ExpensesView({ expenses, deleteExpense, onEdit }: ExpensesViewProps) {
               </td>
               <td className="p-4 md:p-6 text-right tabular text-red-500 font-semibold">-{formatCurrency(e.amount)}</td>
               <td className="p-4 md:p-6 text-right">
-                <button onClick={(e2) => { e2.stopPropagation(); deleteExpense(e.id); }} className="text-gray-900 hover:text-red-500 p-1 cursor-pointer"><Trash2 size={14} /></button>
+                <button onClick={(e2) => { e2.stopPropagation(); setDeleteTarget({ id: e.id, name: `${e.category} expense` }); }} className="text-gray-900 hover:text-red-500 p-1 cursor-pointer"><Trash2 size={14} /></button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Delete Expense"
+        message={`Are you sure you want to delete the ${deleteTarget?.name}?`}
+        onConfirm={() => { if (deleteTarget) deleteExpense(deleteTarget.id); setDeleteTarget(null); }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </Card>
   );
 }
@@ -607,7 +633,7 @@ function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSav
                         className={`flex-1 px-3 py-1.5 text-[10px] font-semibold rounded-lg transition-all ${selectedEngagementId === e.id || (!selectedEngagementId && activeEngagements[0].id === e.id) ? 'bg-[#18181b] text-white shadow-sm' : 'bg-white text-gray-500 border border-gray-200'}`}
                         onClick={() => setSelectedEngagementId(e.id)}
                       >
-                        {e.type === 'Project' ? 'Project Fee' : 'Monthly Retainer'}
+                        {e.serviceName || (e.type === 'Project' ? 'Project Fee' : 'Monthly Retainer')}
                       </button>
                     ))}
                   </div>

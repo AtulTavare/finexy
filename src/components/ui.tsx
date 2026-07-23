@@ -62,6 +62,31 @@ export function Badge({ children, variant = 'default', className, ...props }: Re
   return <span className={cn("px-2.5 py-1.5 text-[11px] font-medium rounded-full", variants[variant], className)} {...props}>{children}</span>;
 }
 
+export function ConfirmDialog({ isOpen, title, message, onConfirm, onCancel, confirmLabel = 'Delete', destructive = true }: {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  confirmLabel?: string;
+  destructive?: boolean;
+}) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[999] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onCancel} />
+      <div className="relative bg-white rounded-2xl p-6 mx-4 w-full max-w-sm shadow-xl border border-gray-100">
+        <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
+        <p className="text-sm text-gray-600 mb-6">{message}</p>
+        <div className="flex gap-3">
+          <Button variant="secondary" onClick={onCancel} className="flex-1">Cancel</Button>
+          <Button variant={destructive ? 'danger' : 'primary'} onClick={onConfirm} className="flex-1">{confirmLabel}</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Modal({ isOpen, onClose, title, children }: { isOpen: boolean, onClose: () => void, title: string, children: React.ReactNode }) {
   if (!isOpen) return null;
   return (

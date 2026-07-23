@@ -69,6 +69,8 @@ export interface Client {
 export interface Engagement {
   id: string;
   clientId: string;
+  projectId?: string;
+  serviceName?: string;
   brand: Brand;
   type: 'Project' | 'Retainer';
   value: number;
@@ -120,6 +122,7 @@ export interface ServicePricing {
   name: string;
   price: number;
   billing: 'one-time' | 'monthly';
+  startDate: string;
 }
 
 export interface Project {
@@ -130,8 +133,6 @@ export interface Project {
   servicePricing: ServicePricing[];
   startDate: string;
   deadline: string;
-  oneTimeBudget: number;
-  monthlyBudget: number;
   status: 'Not Started' | 'In Progress' | 'Under Review' | 'Completed';
   createdAt: string;
   userId?: string;

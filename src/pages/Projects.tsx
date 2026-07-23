@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useData } from '../store/DataContext';
-import { Card, Button, Input, Label, Modal, Badge, DatePicker } from '../components/ui';
+import { Card, Button, Input, Label, Modal, Badge, DatePicker, ConfirmDialog } from '../components/ui';
 import { Client, Project, ServicePricing } from '../types';
 import { format } from 'date-fns';
 import { formatCurrency } from '../lib/utils';
@@ -21,6 +21,7 @@ export default function Projects() {
   const { projects, clients, engagements, businessPayments, addProject, updateProject, deleteProject } = useData();
   const [showModal, setShowModal] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   return (
     <div className="flex flex-col space-y-6">
@@ -45,7 +46,7 @@ export default function Projects() {
                 <Card key={p.id} className="p-4 flex flex-col bg-white cursor-pointer" onClick={() => { setEditingProject(p); setShowModal(true); }}>
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-semibold text-lg">{p.title}</h3>
-                    <button onClick={(e) => { e.stopPropagation(); deleteProject(p.id); }} className="text-gray-900 hover:text-red-500 text-xs px-2 py-1">Delete</button>
+                    <button onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: p.id, name: p.title }); }} className="text-gray-900 hover:text-red-500 text-xs px-2 py-1">Delete</button>
                   </div>
                   <div className="text-sm text-gray-900 mb-4">{client?.name || 'Unknown Client'}</div>
                   
@@ -62,26 +63,37 @@ export default function Projects() {
                       <span className="text-gray-900">Timeline</span>
                       <span>{format(new Date(p.startDate), 'MMM d')} - {format(new Date(p.deadline), 'MMM d')}</span>
                     </div>
-                    {(() => {
-                      const totalBudget = p.oneTimeBudget + p.monthlyBudget;
-                      if (totalBudget <= 0) return null;
-                      const engs = engagements.filter(e => e.clientId === p.clientId && e.status === 'Active');
-                      const paid = engs.reduce((sum, eng) => sum + businessPayments.filter(bp => bp.engagementId === eng.id).reduce((s, bp) => s + bp.amount, 0), 0);
-                      const pct = Math.min(paid / totalBudget, 1);
-                      return (
-                        <div className="space-y-1 pt-2">
-                          {p.oneTimeBudget > 0 && <div className="text-[10px] text-gray-500">One-time: {formatCurrency(p.oneTimeBudget)}</div>}
-                          {p.monthlyBudget > 0 && <div className="text-[10px] text-gray-500">Monthly: {formatCurrency(p.monthlyBudget)}/mo</div>}
-                          <div className="flex justify-between text-[10px]">
-                            <span className="text-gray-500">{formatCurrency(paid)} collected</span>
-                            <span className="font-semibold">{formatCurrency(totalBudget)} total</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-1.5">
-                            <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${pct * 100}%` }} />
-                          </div>
-                        </div>
-                      );
-                    })()}
+                    {p.servicePricing.length > 0 && (
+                      <div className="space-y-2 pt-2">
+                        {p.servicePricing.map(svc => {
+                          const eng = engagements.find(e => e.projectId === p.id && e.serviceName === svc.name);
+                          const paid = eng ? businessPayments.filter(bp => bp.engagementId === eng.id).reduce((s, bp) => s + bp.amount, 0) : 0;
+                          const pct = eng && eng.value > 0 ? Math.min(paid / eng.value, 1) : 0;
+                          const started = new Date(svc.startDate) <= new Date();
+                          return (
+                            <div key={svc.name} className="border-l-2 border-gray-200 pl-2">
+                              <div className="flex justify-between text-[10px]">
+                                <span className="font-medium text-gray-900">{svc.name}</span>
+                                <span className="text-gray-500">{svc.billing === 'one-time' ? formatCurrency(svc.price) : `${formatCurrency(svc.price)}/mo`}</span>
+                              </div>
+                              {!started ? (
+                                <div className="text-[9px] text-orange-500 font-medium">Starts {format(new Date(svc.startDate), 'MMM d')}</div>
+                              ) : eng ? (
+                                <div className="space-y-0.5 mt-1">
+                                  <div className="w-full bg-gray-200 rounded-full h-1">
+                                    <div className="bg-emerald-500 h-1 rounded-full" style={{ width: `${pct * 100}%` }} />
+                                  </div>
+                                  <div className="flex justify-between text-[9px] text-gray-500">
+                                    <span>{formatCurrency(paid)} collected</span>
+                                    <span>{Math.round(pct * 100)}%</span>
+                                  </div>
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                   
                   <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between">
@@ -110,6 +122,14 @@ export default function Projects() {
         onUpdate={updateProject}
         clients={clients}
         editItem={editingProject}
+      />
+
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Delete Project"
+        message={`Are you sure you want to delete "${deleteTarget?.name}"? This will also mark its linked engagements as completed.`}
+        onConfirm={() => { if (deleteTarget) deleteProject(deleteTarget.id); setDeleteTarget(null); }}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   );
@@ -152,7 +172,7 @@ function ProjectModal({ isOpen, onClose, onSave, onUpdate, clients, editItem }: 
     setServicePricing(prev => {
       const existing = prev.find(p => p.name === s);
       if (existing) return prev.filter(p => p.name !== s);
-      return [...prev, { name: s, price: 0, billing: 'one-time' }];
+      return [{ name: s, price: 0, billing: 'one-time', startDate: format(startDate || new Date(), 'yyyy-MM-dd') }, ...prev];
     });
   };
 
@@ -164,15 +184,19 @@ function ProjectModal({ isOpen, onClose, onSave, onUpdate, clients, editItem }: 
     setServicePricing(prev => prev.map(p => p.name === name ? { ...p, billing } : p));
   };
 
+  const updateStartDate = (name: string, date: Date) => {
+    setServicePricing(prev => prev.map(p => p.name === name ? { ...p, startDate: format(date, 'yyyy-MM-dd') } : p));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title) return;
     const services = servicePricing.map(s => s.name);
     if (editItem && onUpdate) {
-      onUpdate(editItem.id, { title, services, servicePricing, startDate: format(startDate, 'yyyy-MM-dd'), deadline: format(deadline, 'yyyy-MM-dd'), status, oneTimeBudget: oneTimeTotal, monthlyBudget: monthlyTotal });
+      onUpdate(editItem.id, { title, services, servicePricing, startDate: format(startDate, 'yyyy-MM-dd'), deadline: format(deadline, 'yyyy-MM-dd'), status });
     } else {
       if (!clientId) return;
-      onSave({ title, clientId, services, servicePricing, startDate: format(startDate, 'yyyy-MM-dd'), deadline: format(deadline, 'yyyy-MM-dd'), status, oneTimeBudget: oneTimeTotal, monthlyBudget: monthlyTotal });
+      onSave({ title, clientId, services, servicePricing, startDate: format(startDate, 'yyyy-MM-dd'), deadline: format(deadline, 'yyyy-MM-dd'), status });
     }
     onClose();
   };
@@ -212,7 +236,7 @@ function ProjectModal({ isOpen, onClose, onSave, onUpdate, clients, editItem }: 
         </div>
         <div>
           <Label>Services &amp; Pricing</Label>
-          <div className="mt-2 space-y-2 max-h-48 overflow-y-auto no-scrollbar p-3 border border-gray-200 bg-white rounded-md">
+          <div className="mt-2 space-y-3 max-h-56 overflow-y-auto no-scrollbar p-3 border border-gray-200 bg-white rounded-md">
             {SERVICES_OFFERED.map(s => {
               const pricing = servicePricing.find(p => p.name === s);
               return (
@@ -250,6 +274,15 @@ function ProjectModal({ isOpen, onClose, onSave, onUpdate, clients, editItem }: 
                           Monthly
                         </button>
                       </div>
+                      <label className="flex items-center gap-1 text-gray-500">
+                        <span>From:</span>
+                        <input
+                          type="date"
+                          value={pricing.startDate}
+                          onChange={e => updateStartDate(s, new Date(e.target.value + 'T00:00:00'))}
+                          className="bg-gray-50 border border-gray-200 rounded px-2 py-1 text-gray-900 text-[10px] focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                        />
+                      </label>
                     </>
                   )}
                 </div>

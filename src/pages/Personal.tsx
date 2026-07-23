@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useData } from '../store/DataContext';
-import { Card, Button, Input, Select, Label, Modal, Badge, DatePicker, Textarea } from '../components/ui';
+import { Card, Button, Input, Select, Label, Modal, Badge, DatePicker, Textarea, ConfirmDialog } from '../components/ui';
 import { formatCurrency } from '../lib/utils';
 import { PersonalExpense, PersonalDebt } from '../types';
 import { format } from 'date-fns';
@@ -22,6 +22,7 @@ export default function Personal() {
   const [showDebtModal, setShowDebtModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<PersonalExpense | null>(null);
   const [editingDebt, setEditingDebt] = useState<PersonalDebt | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string; type: 'expense' | 'debt' } | null>(null);
 
   const location = useLocation();
 
@@ -105,7 +106,7 @@ export default function Personal() {
                         <td className="py-2.5 md:py-3 hidden md:table-cell"><Badge>{exp.category}</Badge></td>
                         <td className="py-2.5 md:py-3 text-right tabular text-red-500 font-semibold">-{formatCurrency(exp.amount)}</td>
                         <td className="py-2.5 md:py-3 text-right">
-                          <button onClick={(e) => { e.stopPropagation(); deletePersonalExpense(exp.id); }} className="text-gray-900 hover:text-red-500 p-1 cursor-pointer"><Trash2 size={14} /></button>
+                          <button onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: exp.id, name: exp.reason, type: 'expense' }); }} className="text-gray-900 hover:text-red-500 p-1 cursor-pointer"><Trash2 size={14} /></button>
                         </td>
                       </tr>
                     ))}
@@ -149,7 +150,7 @@ export default function Personal() {
                            </button>
                         </td>
                         <td className="py-2.5 md:py-3 text-right">
-                          <button onClick={(e) => { e.stopPropagation(); deletePersonalDebt(debt.id); }} className="text-gray-900 hover:text-red-500 p-1 cursor-pointer"><Trash2 size={14} /></button>
+                          <button onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: debt.id, name: debt.partyName, type: 'debt' }); }} className="text-gray-900 hover:text-red-500 p-1 cursor-pointer"><Trash2 size={14} /></button>
                         </td>
                       </tr>
                     ))}
@@ -163,6 +164,18 @@ export default function Personal() {
 
       <ExpenseModal isOpen={showExpenseModal} onClose={() => { setShowExpenseModal(false); setEditingExpense(null); }} onSave={addPersonalExpense} onUpdate={updatePersonalExpense} editItem={editingExpense} />
       <DebtModal isOpen={showDebtModal} onClose={() => { setShowDebtModal(false); setEditingDebt(null); }} onSave={addPersonalDebt} onUpdate={updatePersonalDebt} editItem={editingDebt} />
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title={`Delete ${deleteTarget?.type === 'expense' ? 'Expense' : 'Debt'}`}
+        message={`Are you sure you want to delete "${deleteTarget?.name}"?`}
+        onConfirm={() => {
+          if (!deleteTarget) return;
+          if (deleteTarget.type === 'expense') deletePersonalExpense(deleteTarget.id);
+          else deletePersonalDebt(deleteTarget.id);
+          setDeleteTarget(null);
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

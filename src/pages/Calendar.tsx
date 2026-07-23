@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useData } from '../store/DataContext';
-import { Card, Button, Input, Label, Modal, DatePicker, TimePicker, Textarea } from '../components/ui';
+import { Card, Button, Input, Label, Modal, DatePicker, TimePicker, Textarea, ConfirmDialog } from '../components/ui';
 import { Client, Meeting } from '../types';
 import { 
   format, 
@@ -28,6 +28,7 @@ export default function AppCalendar() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [detailDate, setDetailDate] = useState<Date | null>(null);
   const [editingMeeting, setEditingMeeting] = useState<Meeting | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Meeting | null>(null);
 
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
@@ -177,7 +178,7 @@ export default function AppCalendar() {
                     <div className="font-medium text-sm">{client?.name || m.leadName || m.title}</div>
                     <div className="text-xs text-gray-500 mt-0.5">{m.time} &bull; {m.reason || 'No reason'}</div>
                   </div>
-                  <button onClick={(e) => { e.stopPropagation(); deleteMeeting(m.id); }} className="text-gray-900 hover:text-red-500 p-1 cursor-pointer"><X size={14} /></button>
+                  <button onClick={(e) => { e.stopPropagation(); setDeleteTarget(m); }} className="text-gray-900 hover:text-red-500 p-1 cursor-pointer"><X size={14} /></button>
                 </div>
               );
             })}
@@ -214,6 +215,13 @@ export default function AppCalendar() {
         clients={clients}
         initialDate={selectedDate}
         editItem={editingMeeting}
+      />
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Delete Meeting"
+        message={`Are you sure you want to delete the meeting "${deleteTarget?.title}"?`}
+        onConfirm={() => { if (deleteTarget) deleteMeeting(deleteTarget.id); setDeleteTarget(null); }}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   );

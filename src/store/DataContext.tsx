@@ -500,39 +500,24 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const newItem: Project = { ...item, id: generateId(), createdAt: new Date().toISOString() };
     setArray('projects', (prev) => [newItem, ...prev]);
     const ok = await dbInsert('projects', newItem);
-    if (!ok) setArray('projects', (prev) => prev.filter((p) => p.id !== newItem.id));
-    if (ok) {
-      const client = data.clients.find(c => c.id === item.clientId);
-      if (item.oneTimeBudget > 0) {
-        const engagement: Engagement = {
-          id: generateId(),
-          clientId: item.clientId,
-          brand: client?.brand || 'Infinity Innovations',
-          type: 'Project',
-          value: item.oneTimeBudget,
-          paymentTerms: 'Milestones',
-          startDate: format(new Date(item.startDate || new Date()), 'yyyy-MM-dd'),
-          status: 'Active',
-          createdAt: new Date().toISOString(),
-        };
-        setArray('engagements', (prev) => [engagement, ...prev]);
-        await dbInsert('engagements', engagement);
-      }
-      if (item.monthlyBudget > 0) {
-        const engagement: Engagement = {
-          id: generateId(),
-          clientId: item.clientId,
-          brand: client?.brand || 'Infinity Innovations',
-          type: 'Retainer',
-          value: item.monthlyBudget,
-          paymentTerms: 'Monthly',
-          startDate: format(new Date(item.startDate || new Date()), 'yyyy-MM-dd'),
-          status: 'Active',
-          createdAt: new Date().toISOString(),
-        };
-        setArray('engagements', (prev) => [engagement, ...prev]);
-        await dbInsert('engagements', engagement);
-      }
+    if (!ok) { setArray('projects', (prev) => prev.filter((p) => p.id !== newItem.id)); return; }
+    const client = data.clients.find(c => c.id === item.clientId);
+    for (const svc of item.servicePricing) {
+      const engagement: Engagement = {
+        id: generateId(),
+        clientId: item.clientId,
+        projectId: newItem.id,
+        serviceName: svc.name,
+        brand: client?.brand || 'Infinity Innovations',
+        type: svc.billing === 'one-time' ? 'Project' : 'Retainer',
+        value: svc.price,
+        paymentTerms: svc.billing === 'one-time' ? 'Upfront' : 'Monthly',
+        startDate: svc.startDate,
+        status: 'Active',
+        createdAt: new Date().toISOString(),
+      };
+      setArray('engagements', (prev) => [engagement, ...prev]);
+      await dbInsert('engagements', engagement);
     }
   };
 
@@ -540,52 +525,38 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const prev = data.projects.find(p => p.id === id);
     setArray('projects', (prevArr) => prevArr.map((p) => (p.id === id ? { ...p, ...updates } : p)));
     const ok = await dbUpdate('projects', id, updates);
-    if (!ok && prev) setArray('projects', (prevArr) => prevArr.map((p) => (p.id === id ? prev : p)));
-    const clientId = prev?.clientId || id;
-    if (ok && updates.oneTimeBudget !== undefined) {
-      const activeEng = data.engagements.find(e => e.clientId === clientId && e.status === 'Active' && e.type === 'Project');
-      if (activeEng) {
-        const prevEng = data.engagements.find(e => e.id === activeEng.id);
-        setArray('engagements', (prevArr) => prevArr.map((e) => (e.id === activeEng.id ? { ...e, value: updates.oneTimeBudget! } : e)));
-        const engOk = await dbUpdate('engagements', activeEng.id, { value: updates.oneTimeBudget });
-        if (!engOk && prevEng) setArray('engagements', (prevArr) => prevArr.map((e) => (e.id === activeEng.id ? prevEng : e)));
-      } else if (updates.oneTimeBudget > 0) {
-        const newEng: Engagement = {
-          id: generateId(),
-          clientId,
-          brand: 'Infinity Innovations',
-          type: 'Project',
-          value: updates.oneTimeBudget,
-          paymentTerms: 'Milestones',
-          startDate: new Date().toISOString().slice(0, 10),
-          status: 'Active',
-          createdAt: new Date().toISOString(),
-        };
-        setArray('engagements', (prev) => [newEng, ...prev]);
-        await dbInsert('engagements', newEng);
+    if (!ok && prev) { setArray('projects', (prevArr) => prevArr.map((p) => (p.id === id ? prev : p))); return; }
+    if (ok && updates.servicePricing) {
+      const existingEngs = data.engagements.filter(e => e.projectId === id);
+      const clientId = prev?.clientId || '';
+      const client = data.clients.find(c => c.id === clientId);
+      for (const svc of updates.servicePricing) {
+        const match = existingEngs.find(e => e.serviceName === svc.name);
+        if (match) {
+          const prevEng = data.engagements.find(e => e.id === match.id);
+          setArray('engagements', (prevArr) => prevArr.map(e => e.id === match.id ? { ...e, value: svc.price, startDate: svc.startDate } : e));
+          const engOk = await dbUpdate('engagements', match.id, { value: svc.price, startDate: svc.startDate });
+          if (!engOk && prevEng) setArray('engagements', (prevArr) => prevArr.map(e => (e.id === match.id ? prevEng : e)));
+        } else {
+          const newEng: Engagement = {
+            id: generateId(), clientId, projectId: id, serviceName: svc.name,
+            brand: client?.brand || 'Infinity Innovations',
+            type: svc.billing === 'one-time' ? 'Project' : 'Retainer',
+            value: svc.price, paymentTerms: svc.billing === 'one-time' ? 'Upfront' : 'Monthly',
+            startDate: svc.startDate, status: 'Active', createdAt: new Date().toISOString(),
+          };
+          setArray('engagements', (prev) => [newEng, ...prev]);
+          await dbInsert('engagements', newEng);
+        }
       }
-    }
-    if (ok && updates.monthlyBudget !== undefined) {
-      const activeEng = data.engagements.find(e => e.clientId === clientId && e.status === 'Active' && e.type === 'Retainer');
-      if (activeEng) {
-        const prevEng = data.engagements.find(e => e.id === activeEng.id);
-        setArray('engagements', (prevArr) => prevArr.map((e) => (e.id === activeEng.id ? { ...e, value: updates.monthlyBudget! } : e)));
-        const engOk = await dbUpdate('engagements', activeEng.id, { value: updates.monthlyBudget });
-        if (!engOk && prevEng) setArray('engagements', (prevArr) => prevArr.map((e) => (e.id === activeEng.id ? prevEng : e)));
-      } else if (updates.monthlyBudget > 0) {
-        const newEng: Engagement = {
-          id: generateId(),
-          clientId,
-          brand: 'Infinity Innovations',
-          type: 'Retainer',
-          value: updates.monthlyBudget,
-          paymentTerms: 'Monthly',
-          startDate: new Date().toISOString().slice(0, 10),
-          status: 'Active',
-          createdAt: new Date().toISOString(),
-        };
-        setArray('engagements', (prev) => [newEng, ...prev]);
-        await dbInsert('engagements', newEng);
+      const currentNames = new Set(updates.servicePricing.map(s => s.name));
+      for (const eng of existingEngs) {
+        if (eng.serviceName && !currentNames.has(eng.serviceName)) {
+          const prevEng = data.engagements.find(e => e.id === eng.id);
+          setArray('engagements', (prevArr) => prevArr.map(e => e.id === eng.id ? { ...e, status: 'Completed' as const } : e));
+          const engOk = await dbUpdate('engagements', eng.id, { status: 'Completed' });
+          if (!engOk && prevEng) setArray('engagements', (prevArr) => prevArr.map(e => (e.id === eng.id ? prevEng : e)));
+        }
       }
     }
   };

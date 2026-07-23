@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useData } from '../store/DataContext';
-import { Card, Button, Input, Select, Label, Modal, Badge, DatePicker } from '../components/ui';
+import { Card, Button, Input, Select, Label, Modal, Badge, DatePicker, ConfirmDialog } from '../components/ui';
 import { Brand, Task } from '../types';
 import { format, isToday, isThisWeek, isBefore, startOfToday } from 'date-fns';
 import { Trash2, CheckCircle, Circle } from 'lucide-react';
@@ -13,6 +13,7 @@ export default function Tasks() {
   const { tasks, addTask, updateTask, deleteTask } = useData();
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Task | null>(null);
   const location = useLocation();
 
   useEffect(() => {
@@ -70,7 +71,7 @@ export default function Tasks() {
             sortedTasks.length === 0 ? (
               <div className="text-gray-900 text-sm italic">No tasks in this view.</div>
             ) : (
-              sortedTasks.map(t => <TaskItem key={t.id} task={t} onToggle={() => updateTask(t.id, { isCompleted: !t.isCompleted })} onDelete={() => { deleteTask(t.id) }} onEdit={() => { setEditingTask(t); setShowModal(true); }} />)
+              sortedTasks.map(t => <TaskItem key={t.id} task={t} onToggle={() => updateTask(t.id, { isCompleted: !t.isCompleted })} onDelete={() => setDeleteTarget(t)} onEdit={() => { setEditingTask(t); setShowModal(true); }} />)
             )
           ) : (
             <div className="space-y-8">
@@ -81,7 +82,7 @@ export default function Tasks() {
                   <div key={brand}>
                     <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-900 mb-3">{brand}</h3>
                     <div className="space-y-3">
-                      {brandTasks.map(t => <TaskItem key={t.id} task={t} onToggle={() => updateTask(t.id, { isCompleted: !t.isCompleted })} onDelete={() => { deleteTask(t.id) }} onEdit={() => { setEditingTask(t); setShowModal(true); }} />)}
+                      {brandTasks.map(t => <TaskItem key={t.id} task={t} onToggle={() => updateTask(t.id, { isCompleted: !t.isCompleted })} onDelete={() => setDeleteTarget(t)} onEdit={() => { setEditingTask(t); setShowModal(true); }} />)}
                     </div>
                   </div>
                 );
@@ -94,7 +95,7 @@ export default function Tasks() {
                   <div>
                     <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-900 mb-3">Personal / No Brand</h3>
                     <div className="space-y-3">
-                      {nbTasks.map(t => <TaskItem key={t.id} task={t} onToggle={() => updateTask(t.id, { isCompleted: !t.isCompleted })} onDelete={() => { deleteTask(t.id) }} onEdit={() => { setEditingTask(t); setShowModal(true); }} />)}
+                      {nbTasks.map(t => <TaskItem key={t.id} task={t} onToggle={() => updateTask(t.id, { isCompleted: !t.isCompleted })} onDelete={() => setDeleteTarget(t)} onEdit={() => { setEditingTask(t); setShowModal(true); }} />)}
                     </div>
                   </div>
                 )
@@ -105,6 +106,13 @@ export default function Tasks() {
       </Card>
 
       <TaskModal isOpen={showModal} onClose={() => { setShowModal(false); setEditingTask(null); }} onSave={addTask} onUpdate={updateTask} editItem={editingTask} />
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Delete Task"
+        message={`Are you sure you want to delete the task "${deleteTarget?.title}"?`}
+        onConfirm={() => { if (deleteTarget) deleteTask(deleteTarget.id); setDeleteTarget(null); }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }
