@@ -11,6 +11,7 @@ import Personal from './pages/Personal';
 import Business from './pages/Business';
 import Tasks from './pages/Tasks';
 import Projects from './pages/Projects';
+import ProjectDetail from './pages/ProjectDetail';
 import AppCalendar from './pages/Calendar';
 import './index.css';
 
@@ -28,6 +29,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="/projects" element={<Projects />} />
               <Route path="/calendar" element={<AppCalendar />} />
               <Route path="/tasks" element={<Tasks />} />
+              <Route path="/project/:id" element={<ProjectDetail />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Route>
