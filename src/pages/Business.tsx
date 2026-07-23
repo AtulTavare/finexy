@@ -17,7 +17,8 @@ export default function Business() {
     clients, addClient, updateClient, deleteClient,
     engagements, addEngagement, updateEngagement, deleteEngagement,
     businessPayments, addBusinessPayment, updateBusinessPayment, deleteBusinessPayment,
-    businessExpenses, addBusinessExpense, updateBusinessExpense, deleteBusinessExpense
+    businessExpenses, addBusinessExpense, updateBusinessExpense, deleteBusinessExpense,
+    projects
   } = useData();
 
   const [showLeadModal, setShowLeadModal] = useState(false);
