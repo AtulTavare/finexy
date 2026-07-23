@@ -140,6 +140,31 @@ export default function ProjectDetail() {
         </div>
       </Card>
 
+      {(() => {
+        const unlinked = businessPayments.filter(p => !p.engagementId && p.clientId === project.clientId);
+        if (unlinked.length === 0) return null;
+        const unlinkedTotal = unlinked.reduce((s, p) => s + p.amount, 0);
+        return (
+          <Card className="p-4 md:p-6 border border-dashed border-orange-300 bg-orange-50/40">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-sm font-semibold text-orange-700">Unlinked Payments</h2>
+              <span className="text-sm font-bold text-orange-700">{formatCurrency(unlinkedTotal)}</span>
+            </div>
+            <p className="text-[11px] text-orange-500 italic mb-3">
+              These payments were logged without linking to a specific service. Edit them in Business → Payments to assign a service.
+            </p>
+            <div className="space-y-1">
+              {unlinked.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(p => (
+                <div key={p.id} className="flex justify-between text-xs text-orange-600">
+                  <span>{format(new Date(p.date), 'MMM d')} — {p.invoiceReference || 'No ref'}</span>
+                  <span className="tabular font-medium">{formatCurrency(p.amount)}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        );
+      })()}
+
       <Card className="p-0">
         <div className="flex justify-between items-center p-4 md:p-6 border-b border-gray-100">
           <h2 className="text-sm font-semibold text-gray-900">Payment History</h2>
