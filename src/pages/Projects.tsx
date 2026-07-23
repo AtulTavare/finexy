@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useData } from '../store/DataContext';
 import { Card, Button, Input, Label, Modal, Badge, DatePicker } from '../components/ui';
 import { Client, Project } from '../types';
@@ -19,6 +19,7 @@ const SERVICES_OFFERED = [
 export default function Projects() {
   const { projects, clients, addProject, updateProject, deleteProject } = useData();
   const [showModal, setShowModal] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
 
   return (
     <div className="flex flex-col space-y-6">
@@ -40,10 +41,10 @@ export default function Projects() {
             {projects.map(p => {
               const client = clients.find(c => c.id === p.clientId);
               return (
-                <Card key={p.id} className="p-4 flex flex-col bg-white">
+                <Card key={p.id} className="p-4 flex flex-col bg-white cursor-pointer" onClick={() => { setEditingProject(p); setShowModal(true); }}>
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-semibold text-lg">{p.title}</h3>
-                    <button onClick={() => { deleteProject(p.id) }} className="text-gray-900 hover:text-red-500 text-xs px-2 py-1">Delete</button>
+                    <button onClick={(e) => { e.stopPropagation(); deleteProject(p.id); }} className="text-gray-900 hover:text-red-500 text-xs px-2 py-1">Delete</button>
                   </div>
                   <div className="text-sm text-gray-900 mb-4">{client?.name || 'Unknown Client'}</div>
                   
@@ -83,9 +84,11 @@ export default function Projects() {
 
       <ProjectModal 
         isOpen={showModal} 
-        onClose={() => setShowModal(false)} 
+        onClose={() => { setShowModal(false); setEditingProject(null); }} 
         onSave={addProject}
+        onUpdate={updateProject}
         clients={clients}
+        editItem={editingProject}
       />
     </div>
   );
@@ -95,10 +98,12 @@ interface ProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (item: Omit<Project, 'id' | 'createdAt'>) => void;
+  onUpdate?: (id: string, updates: Partial<Project>) => void;
   clients: Client[];
+  editItem?: Project | null;
 }
 
-function ProjectModal({ isOpen, onClose, onSave, clients }: ProjectModalProps) {
+function ProjectModal({ isOpen, onClose, onSave, onUpdate, clients, editItem }: ProjectModalProps) {
   const [title, setTitle] = useState('');
   const [clientId, setClientId] = useState('');
   const [services, setServices] = useState<string[]>([]);
@@ -106,19 +111,32 @@ function ProjectModal({ isOpen, onClose, onSave, clients }: ProjectModalProps) {
   const [deadline, setDeadline] = useState(new Date());
   const [status, setStatus] = useState<'Not Started' | 'In Progress' | 'Under Review' | 'Completed'>('Not Started');
 
+  useEffect(() => {
+    if (editItem) {
+      setTitle(editItem.title); setClientId(editItem.clientId); setServices(editItem.services); setStartDate(new Date(editItem.startDate)); setDeadline(new Date(editItem.deadline)); setStatus(editItem.status);
+    } else {
+      setTitle(''); setClientId(''); setServices([]); setStartDate(new Date()); setDeadline(new Date()); setStatus('Not Started');
+    }
+  }, [editItem, isOpen]);
+
   const toggleService = (s: string) => {
     setServices(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !clientId) return;
-    onSave({ title, clientId, services, startDate: format(startDate, 'yyyy-MM-dd'), deadline: format(deadline, 'yyyy-MM-dd'), status });
+    if (!title) return;
+    if (editItem && onUpdate) {
+      onUpdate(editItem.id, { title, services, startDate: format(startDate, 'yyyy-MM-dd'), deadline: format(deadline, 'yyyy-MM-dd'), status });
+    } else {
+      if (!clientId) return;
+      onSave({ title, clientId, services, startDate: format(startDate, 'yyyy-MM-dd'), deadline: format(deadline, 'yyyy-MM-dd'), status });
+    }
     onClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add Project">
+    <Modal isOpen={isOpen} onClose={onClose} title={editItem ? 'Edit Project' : 'Add Project'}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div><Label>Project Title</Label><Input value={title} onChange={e => setTitle(e.target.value)} required /></div>
         <div>
@@ -167,7 +185,7 @@ function ProjectModal({ isOpen, onClose, onSave, clients }: ProjectModalProps) {
           </div>
         </div>
         
-        <Button type="submit" className="w-full mt-4">Save Project</Button>
+        <Button type="submit" className="w-full mt-4">{editItem ? 'Update Project' : 'Save Project'}</Button>
       </form>
     </Modal>
   );

@@ -12,6 +12,7 @@ export default function Tasks() {
   const [activeTab, setActiveTab] = useState<'Today' | 'This Week' | 'Overdue' | 'By Brand'>('Today');
   const { tasks, addTask, updateTask, deleteTask } = useData();
   const [showModal, setShowModal] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const location = useLocation();
 
   useEffect(() => {
@@ -69,7 +70,7 @@ export default function Tasks() {
             sortedTasks.length === 0 ? (
               <div className="text-gray-900 text-sm italic">No tasks in this view.</div>
             ) : (
-              sortedTasks.map(t => <TaskItem key={t.id} task={t} onToggle={() => updateTask(t.id, { isCompleted: !t.isCompleted })} onDelete={() => { deleteTask(t.id) }} />)
+              sortedTasks.map(t => <TaskItem key={t.id} task={t} onToggle={() => updateTask(t.id, { isCompleted: !t.isCompleted })} onDelete={() => { deleteTask(t.id) }} onEdit={() => { setEditingTask(t); setShowModal(true); }} />)
             )
           ) : (
             <div className="space-y-8">
@@ -80,7 +81,7 @@ export default function Tasks() {
                   <div key={brand}>
                     <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-900 mb-3">{brand}</h3>
                     <div className="space-y-3">
-                      {brandTasks.map(t => <TaskItem key={t.id} task={t} onToggle={() => updateTask(t.id, { isCompleted: !t.isCompleted })} onDelete={() => { deleteTask(t.id) }} />)}
+                      {brandTasks.map(t => <TaskItem key={t.id} task={t} onToggle={() => updateTask(t.id, { isCompleted: !t.isCompleted })} onDelete={() => { deleteTask(t.id) }} onEdit={() => { setEditingTask(t); setShowModal(true); }} />)}
                     </div>
                   </div>
                 );
@@ -93,7 +94,7 @@ export default function Tasks() {
                   <div>
                     <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-900 mb-3">Personal / No Brand</h3>
                     <div className="space-y-3">
-                      {nbTasks.map(t => <TaskItem key={t.id} task={t} onToggle={() => updateTask(t.id, { isCompleted: !t.isCompleted })} onDelete={() => { deleteTask(t.id) }} />)}
+                      {nbTasks.map(t => <TaskItem key={t.id} task={t} onToggle={() => updateTask(t.id, { isCompleted: !t.isCompleted })} onDelete={() => { deleteTask(t.id) }} onEdit={() => { setEditingTask(t); setShowModal(true); }} />)}
                     </div>
                   </div>
                 )
@@ -103,17 +104,17 @@ export default function Tasks() {
         </div>
       </Card>
 
-      <TaskModal isOpen={showModal} onClose={() => setShowModal(false)} onSave={addTask} />
+      <TaskModal isOpen={showModal} onClose={() => { setShowModal(false); setEditingTask(null); }} onSave={addTask} onUpdate={updateTask} editItem={editingTask} />
     </div>
   );
 }
 
-function TaskItem({ task, onToggle, onDelete }: { task: Task, onToggle: () => void, onDelete: () => void, key?: React.Key }) {
+function TaskItem({ task, onToggle, onDelete, onEdit }: { task: Task, onToggle: () => void, onDelete: () => void, onEdit: () => void, key?: React.Key }) {
   const isOverdue = isBefore(new Date(task.dueDate), startOfToday());
   
   return (
-    <div className="flex items-start space-x-3 p-3 border border-gray-100 bg-white hover:border-orange-500 rounded-xl shadow-sm transition-colors group">
-      <button onClick={onToggle} className="mt-0.5 text-gray-900 hover:text-gray-900 transition-colors cursor-pointer">
+    <div className="flex items-start space-x-3 p-3 border border-gray-100 bg-white hover:border-orange-500 rounded-xl shadow-sm transition-colors group cursor-pointer" onClick={onEdit}>
+      <button onClick={(e) => { e.stopPropagation(); onToggle(); }} className="mt-0.5 text-gray-900 hover:text-gray-900 transition-colors cursor-pointer">
         {task.isCompleted ? <CheckCircle size={20} className="text-emerald-500" /> : <Circle size={20} />}
       </button>
       <div className="flex-1 min-w-0">
@@ -138,14 +139,14 @@ function TaskItem({ task, onToggle, onDelete }: { task: Task, onToggle: () => vo
           )}
         </div>
       </div>
-      <button onClick={onDelete} className="text-gray-900 hover:text-red-500 p-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+      <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-gray-900 hover:text-red-500 p-1 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
         <Trash2 size={14} />
       </button>
     </div>
   );
 }
 
-function TaskModal({ isOpen, onClose, onSave }: any) {
+function TaskModal({ isOpen, onClose, onSave, onUpdate, editItem }: any) {
   const [title, setTitle] = useState('');
   const [type, setType] = useState<Task['type']>('Personal');
   const [brand, setBrand] = useState<Brand | ''>('');
@@ -153,20 +154,27 @@ function TaskModal({ isOpen, onClose, onSave }: any) {
   const [dueDate, setDueDate] = useState(new Date());
   const [recurrence, setRecurrence] = useState<Task['recurrence']>('None');
 
+  useEffect(() => {
+    if (editItem) {
+      setTitle(editItem.title); setType(editItem.type); setBrand(editItem.brand || ''); setPriority(editItem.priority); setDueDate(new Date(editItem.dueDate)); setRecurrence(editItem.recurrence);
+    } else {
+      setTitle(''); setType('Personal'); setBrand(''); setPriority('Medium'); setDueDate(new Date()); setRecurrence('None');
+    }
+  }, [editItem, isOpen]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !dueDate) return;
-    onSave({
-      title, type, priority, dueDate: format(dueDate, 'yyyy-MM-dd'), recurrence,
-      brand: brand || undefined,
-      isCompleted: false
-    });
-    setTitle('');
+    if (editItem && onUpdate) {
+      onUpdate(editItem.id, { title, type, brand: brand || undefined, priority, dueDate: format(dueDate, 'yyyy-MM-dd'), recurrence });
+    } else {
+      onSave({ title, type, brand: brand || undefined, priority, dueDate: format(dueDate, 'yyyy-MM-dd'), recurrence, isCompleted: false });
+    }
     onClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add Task">
+    <Modal isOpen={isOpen} onClose={onClose} title={editItem ? 'Edit Task' : 'Add Task'}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div><Label>Task Title</Label><Input value={title} onChange={e => setTitle(e.target.value)} required /></div>
         <div className="grid grid-cols-2 gap-4">
@@ -207,7 +215,7 @@ function TaskModal({ isOpen, onClose, onSave }: any) {
             </Select>
           </div>
         </div>
-        <Button type="submit" className="w-full mt-4">Save Task</Button>
+        <Button type="submit" className="w-full mt-4">{editItem ? 'Update Task' : 'Save Task'}</Button>
       </form>
     </Modal>
   );

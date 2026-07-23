@@ -7,12 +7,12 @@ import {
 import { useAuth } from '../store/AuthContext';
 
 const NAV_ITEMS = [
-  { path: '/', label: 'Overview', icon: LayoutDashboard },
-  { path: '/personal', label: 'Activity', icon: Wallet },
-  { path: '/business', label: 'Manage', icon: Briefcase },
-  { path: '/projects', label: 'Program', icon: FolderKanban },
-  { path: '/calendar', label: 'Account', icon: CalendarIcon },
-  { path: '/tasks', label: 'Reports', icon: CheckSquare },
+  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/personal', label: 'Personal', icon: Wallet },
+  { path: '/business', label: 'Business', icon: Briefcase },
+  { path: '/projects', label: 'Projects', icon: FolderKanban },
+  { path: '/calendar', label: 'Calendar', icon: CalendarIcon },
+  { path: '/tasks', label: 'Tasks', icon: CheckSquare },
 ];
 
 export function Layout() {

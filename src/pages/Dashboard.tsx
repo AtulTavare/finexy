@@ -1,16 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../store/DataContext';
-import { Card, Button, Input, Label, Modal, Badge, DatePicker } from '../components/ui';
+import { Card, Button, Badge } from '../components/ui';
 import { formatCurrency } from '../lib/utils';
 import { format, subMonths, isAfter, startOfMonth, isBefore, addDays, startOfToday, startOfWeek, subWeeks, subDays, startOfDay } from 'date-fns';
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
+import { BarChart, Bar, PieChart, Pie, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 import { PlusCircle, ArrowUpRight, ArrowDownRight, Briefcase } from 'lucide-react';
 
 export default function Dashboard() {
   const data = useData();
   const navigate = useNavigate();
-  const [showDrawModal, setShowDrawModal] = useState(false);
   const [timeFilter, setTimeFilter] = useState<'Daily' | 'Weekly' | 'Monthly'>('Monthly');
 
   // --- Calculations ---
@@ -22,26 +21,22 @@ export default function Dashboard() {
     return startOfMonth(today);
   }, [timeFilter, today]);
 
-  // Total Net Position
   const totalReceivables = data.engagements.filter(e => e.status === 'Active').reduce((sum, e) => {
     const paid = data.businessPayments.filter(p => p.engagementId === e.id).reduce((s, p) => s + p.amount, 0);
     return sum + Math.max(0, e.value - paid);
   }, 0);
-  const outstandingDebts = data.personalDebts.filter(d => d.type === 'I Owe' && d.status !== 'Paid').reduce((sum, d) => sum + d.amount, 0);
-  const businessCash = data.businessPayments.reduce((s, p) => s + p.amount, 0) - data.businessExpenses.reduce((s, e) => s + e.amount, 0) - data.ownerDraws.reduce((s, d) => s + d.amount, 0);
-  const personalNet = data.personalIncome.reduce((s, i) => s + i.amount, 0) - data.personalExpenses.reduce((s, e) => s + e.amount, 0);
-  const netPosition = personalNet + businessCash + totalReceivables - outstandingDebts;
-
-  // Period Cash Flow
-  const periodInc = 
-    data.personalIncome.filter(i => isAfter(new Date(i.date), filterStart)).reduce((s,i) => s+i.amount, 0) +
-    data.businessPayments.filter(p => isAfter(new Date(p.date), filterStart)).reduce((s,p) => s+p.amount, 0) -
-    data.ownerDraws.filter(d => isAfter(new Date(d.date), filterStart)).reduce((s,d) => s+d.amount, 0);
-  
+  const totalBusinessIncome = data.businessPayments.reduce((s, p) => s + p.amount, 0);
+  const totalPersonalExpenses = data.personalExpenses.reduce((s, e) => s + e.amount, 0);
+  const totalBusinessExpenses = data.businessExpenses.reduce((s, e) => s + e.amount, 0);
+  const totalExpenses = totalPersonalExpenses + totalBusinessExpenses;
+  const netIncome = totalBusinessIncome - totalExpenses;
+  const iOwe = data.personalDebts.filter(d => d.type === 'I Owe' && d.status !== 'Paid').reduce((s, d) => s + d.amount, 0);
+  const owedToMe = data.personalDebts.filter(d => d.type === 'Owed to Me' && d.status !== 'Paid').reduce((s, d) => s + d.amount, 0);
+  const netDebt = iOwe - owedToMe;
+  const periodInc = data.businessPayments.filter(p => isAfter(new Date(p.date), filterStart)).reduce((s,p) => s+p.amount, 0);
   const periodExp = 
     data.personalExpenses.filter(e => isAfter(new Date(e.date), filterStart)).reduce((s,e) => s+e.amount, 0) +
     data.businessExpenses.filter(e => isAfter(new Date(e.date), filterStart)).reduce((s,e) => s+e.amount, 0);
-  
   const periodNet = periodInc - periodExp;
 
   // Pipeline
@@ -64,7 +59,7 @@ export default function Dashboard() {
 
     return periods.map(p => {
       const nextP = timeFilter === 'Monthly' ? addDays(p, 31) : timeFilter === 'Weekly' ? addDays(p, 7) : addDays(p, 1);
-      const inc = data.personalIncome.filter(i => new Date(i.date) >= p && new Date(i.date) < nextP).reduce((s,x) => s+x.amount, 0) + data.businessPayments.filter(i => new Date(i.date) >= p && new Date(i.date) < nextP).reduce((s,x) => s+x.amount, 0);
+      const inc = data.businessPayments.filter(i => new Date(i.date) >= p && new Date(i.date) < nextP).reduce((s,x) => s+x.amount, 0);
       const exp = data.personalExpenses.filter(e => new Date(e.date) >= p && new Date(e.date) < nextP).reduce((s,x) => s+x.amount, 0) + data.businessExpenses.filter(e => new Date(e.date) >= p && new Date(e.date) < nextP).reduce((s,x) => s+x.amount, 0);
       return { 
         name: timeFilter === 'Monthly' ? format(p, 'MMM') : timeFilter === 'Weekly' ? format(p, 'MMM d') : format(p, 'EEE'), 
@@ -74,17 +69,14 @@ export default function Dashboard() {
     });
   }, [timeFilter, today, data]);
 
-  // Expenses Pie Chart
+  // Biz Expenses Pie Chart
   const expenseCategories = useMemo(() => {
     const cats: Record<string, number> = {};
-    data.personalExpenses.forEach(e => {
-      cats[e.category] = (cats[e.category] || 0) + e.amount;
-    });
     data.businessExpenses.forEach(e => {
       cats[e.category] = (cats[e.category] || 0) + e.amount;
     });
     return Object.entries(cats).map(([name, value]) => ({ name, value })).filter(c => c.value > 0).sort((a,b) => b.value - a.value);
-  }, [data.personalExpenses, data.businessExpenses]);
+  }, [data.businessExpenses]);
 
   const COLORS = ['#f97316', '#18181b', '#fb923c', '#3f3f46', '#fdba74', '#71717a'];
 
@@ -95,8 +87,9 @@ export default function Dashboard() {
   data.tasks.filter(t => !t.isCompleted && isBefore(new Date(t.dueDate), nextWeek)).forEach(t => {
     attentionItems.push({ id: t.id, title: t.title, subtitle: `Task (${t.type})`, date: new Date(t.dueDate), type: 'task' });
   });
-  data.personalDebts.filter(d => d.type === 'I Owe' && d.status !== 'Paid' && isBefore(new Date(d.dueDate), nextWeek)).forEach(d => {
-    attentionItems.push({ id: d.id, title: `Owe ${d.partyName}`, subtitle: formatCurrency(d.amount), date: new Date(d.dueDate), type: 'debt' });
+  data.personalDebts.filter(d => d.status !== 'Paid' && isBefore(new Date(d.dueDate), nextWeek)).forEach(d => {
+    const prefix = d.type === 'I Owe' ? 'Owe' : 'Owed';
+    attentionItems.push({ id: d.id, title: `${prefix} ${d.partyName}`, subtitle: formatCurrency(d.amount), date: new Date(d.dueDate), type: 'debt' });
   });
   
   attentionItems.sort((a, b) => a.date.getTime() - b.date.getTime());
@@ -117,7 +110,7 @@ export default function Dashboard() {
           <Button onClick={() => triggerEvent('open-expense-modal', '/personal')} className="bg-white border-gray-200 hover:bg-gray-50 text-xs text-gray-900 shadow-sm"><ArrowDownRight size={14} className="mr-1 inline" /> Expense</Button>
           <Button onClick={() => triggerEvent('open-lead-modal', '/business')} className="bg-white border-gray-200 hover:bg-gray-50 text-xs text-gray-900 shadow-sm"><Briefcase size={14} className="mr-1 inline" /> Lead</Button>
           <Button onClick={() => triggerEvent('open-task-modal', '/tasks')} className="bg-white border-gray-200 hover:bg-gray-50 text-xs text-gray-900 shadow-sm"><PlusCircle size={14} className="mr-1 inline" /> Task</Button>
-          <Button onClick={() => setShowDrawModal(true)} className="col-span-2 sm:col-auto text-xs shadow-sm">Owner Draw</Button>
+
         </div>
       </div>
 
@@ -135,10 +128,10 @@ export default function Dashboard() {
       </div>
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard title="Net Position" value={netPosition}  />
-        <MetricCard title={`${timeFilter} Cash Flow`} value={periodNet} isPositive={periodNet >= 0}  />
-        <MetricCard title="Receivables" value={totalReceivables}  />
-        <MetricCard title="Total Debt" value={outstandingDebts} isDebt  />
+        <MetricCard title="Business Income" value={totalBusinessIncome} />
+        <MetricCard title={`${timeFilter} Net`} value={periodNet} isPositive={periodNet >= 0} />
+        <MetricCard title="Receivables" value={totalReceivables} />
+        <MetricCard title="Net Debt" value={netDebt} isDebt />
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -200,11 +193,35 @@ export default function Dashboard() {
                 <div className="text-lg md:text-2xl tabular text-green-700 font-semibold">{formatCurrency(mrr)}</div>
                 <div className="text-[10px] md:text-xs text-gray-800 mt-1 font-semibold">From Retainers</div>
               </Card>
-              <Card className="p-4 col-span-2 flex flex-col justify-center">
-                <div className="text-xs uppercase text-gray-900 font-semibold mb-1 tracking-widest">Business Cash</div>
-                <div className="text-2xl tabular font-semibold">{formatCurrency(businessCash)}</div>
+              <Card className="p-4 flex flex-col justify-center">
+                <div className="text-[10px] md:text-xs uppercase text-gray-900 font-semibold mb-1 tracking-widest">Personal Expenses</div>
+                <div className="text-lg md:text-2xl tabular text-red-500 font-semibold">{formatCurrency(totalPersonalExpenses)}</div>
+              </Card>
+              <Card className="p-4 flex flex-col justify-center">
+                <div className="text-[10px] md:text-xs uppercase text-gray-900 font-semibold mb-1 tracking-widest">Business Expenses</div>
+                <div className="text-lg md:text-2xl tabular text-red-500 font-semibold">{formatCurrency(totalBusinessExpenses)}</div>
               </Card>
             </div>
+          </div>
+
+          <div className="space-y-6">
+            <Card className="p-4 md:p-6 bg-white">
+              <h2 className="text-sm font-semibold text-gray-900 mb-4">Debt Overview</h2>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-500">I Owe</span>
+                  <span className="text-sm tabular font-semibold text-red-500">{formatCurrency(iOwe)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-500">Owed to Me</span>
+                  <span className="text-sm tabular font-semibold text-emerald-500">{formatCurrency(owedToMe)}</span>
+                </div>
+                <div className="border-t border-gray-200 pt-2 flex justify-between items-center">
+                  <span className="text-xs font-semibold text-gray-900">Net Debt</span>
+                  <span className="text-sm tabular font-semibold">{formatCurrency(netDebt)}</span>
+                </div>
+              </div>
+            </Card>
           </div>
         </div>
 
@@ -235,16 +252,15 @@ export default function Dashboard() {
         </div>
       </div>
       
-      <DrawModal isOpen={showDrawModal} onClose={() => setShowDrawModal(false)} onSave={data.processOwnerDraw} maxAmount={businessCash} />
     </div>
   );
 }
 
 function MetricCard({ title, value, isPositive, isDebt }: { title: string, value: number, isPositive?: boolean, isDebt?: boolean }) {
   const color = isDebt ? (value > 0 ? 'text-red-500' : 'text-gray-900') : (isPositive === true ? 'text-emerald-500' : isPositive === false ? 'text-red-500' : 'text-gray-900');
-  const bgColor = title === "Net Position" ? "bg-[#18181b] text-white" : isPositive === true ? "bg-[#f97316] text-white" : "bg-white text-gray-900";
-  const labelColor = title === "Net Position" ? "text-gray-400" : isPositive === true ? "text-orange-100" : "text-gray-500";
-  const valColor = title === "Net Position" ? "text-white" : isPositive === true ? "text-white" : color;
+  const bgColor = isPositive === true ? "bg-[#f97316] text-white" : "bg-white text-gray-900";
+  const labelColor = isPositive === true ? "text-orange-100" : "text-gray-500";
+  const valColor = isPositive === true ? "text-white" : color;
   
   return (
     <Card className={`p-4 md:p-6 flex flex-col justify-center ${bgColor}`}>
@@ -253,37 +269,6 @@ function MetricCard({ title, value, isPositive, isDebt }: { title: string, value
         {formatCurrency(value)}
       </div>
     </Card>
-  );
-}
-
-interface DrawModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (amount: number, date: string) => void;
-  maxAmount: number;
-}
-
-function DrawModal({ isOpen, onClose, onSave, maxAmount }: DrawModalProps) {
-  const [amount, setAmount] = useState('');
-  const [date, setDate] = useState(new Date());
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!amount) return;
-    onSave(parseFloat(amount), format(date, 'yyyy-MM-dd'));
-    setAmount('');
-    onClose();
-  };
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Owner Draw">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="text-xs text-gray-900">Move cash from Business to Personal. Available Business Cash: <strong className="text-gray-900 tabular">{formatCurrency(maxAmount)}</strong></div>
-        <div><Label>Amount</Label><Input type="number" step="0.01" max={maxAmount} value={amount} onChange={e => setAmount(e.target.value)} required /></div>
-        <div><Label>Date</Label><DatePicker value={date} onChange={setDate} /></div>
-        <Button type="submit" className="w-full mt-4">Process Draw</Button>
-      </form>
-    </Modal>
   );
 }
 

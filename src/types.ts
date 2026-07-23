@@ -116,14 +116,6 @@ export interface Task {
   userId?: string;
 }
 
-export interface OwnerDraw {
-  id: string;
-  amount: number;
-  date: string;
-  createdAt: string;
-  userId?: string;
-}
-
 export interface Project {
   id: string;
   clientId: string;
@@ -158,7 +150,6 @@ export interface PulseData {
   businessPayments: BusinessPayment[];
   businessExpenses: BusinessExpense[];
   tasks: Task[];
-  ownerDraws: OwnerDraw[];
   projects: Project[];
   meetings: Meeting[];
 }

@@ -18,38 +18,44 @@ import {
   addDays, 
   parseISO,
   differenceInDays,
-  isAfter
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, X, Edit2 } from 'lucide-react';
 
 export default function AppCalendar() {
-  const { projects, meetings, clients, addMeeting } = useData();
+  const { projects, meetings, clients, addMeeting, updateMeeting, deleteMeeting } = useData();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showModal, setShowModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [detailDate, setDetailDate] = useState<Date | null>(null);
+  const [editingMeeting, setEditingMeeting] = useState<Meeting | null>(null);
 
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
 
   const onDateClick = (day: Date) => {
-    setSelectedDate(day);
-    setShowModal(true);
+    const dayMeetings = meetings.filter(m => isSameDay(parseISO(m.date), day));
+    const dayProjects = projects.filter(p => {
+      const s = parseISO(p.startDate); const e = parseISO(p.deadline);
+      return (day >= s && day <= e);
+    });
+    if (dayMeetings.length > 0 || dayProjects.length > 0) {
+      setDetailDate(day);
+    } else {
+      setSelectedDate(day);
+      setShowModal(true);
+    }
   };
 
-  const renderHeader = () => {
-    return (
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold tracking-tighter">
-          {format(currentMonth, 'MMMM yyyy')}
-        </h1>
-        <div className="flex space-x-2">
-          <Button onClick={prevMonth} className="px-2 bg-gray-100 border-gray-200 hover:bg-gray-200"><ChevronLeft size={16} /></Button>
-          <Button onClick={nextMonth} className="px-2 bg-gray-100 border-gray-200 hover:bg-gray-200"><ChevronRight size={16} /></Button>
-          <Button onClick={() => { setSelectedDate(new Date()); setShowModal(true); }} className="ml-2 md:ml-4 px-3 md:px-4"><span className="hidden md:inline">+ Add Meeting</span><Plus size={16} className="md:hidden" /></Button>
-        </div>
+  const renderHeader = () => (
+    <div className="flex justify-between items-center mb-6">
+      <h1 className="text-2xl font-semibold tracking-tighter">{format(currentMonth, 'MMMM yyyy')}</h1>
+      <div className="flex space-x-2">
+        <Button onClick={prevMonth} className="px-2 bg-gray-100 border-gray-200 hover:bg-gray-200"><ChevronLeft size={16} /></Button>
+        <Button onClick={nextMonth} className="px-2 bg-gray-100 border-gray-200 hover:bg-gray-200"><ChevronRight size={16} /></Button>
+        <Button onClick={() => { setSelectedDate(new Date()); setShowModal(true); }} className="ml-2 md:ml-4 px-3 md:px-4"><span className="hidden md:inline">+ Add Meeting</span><Plus size={16} className="md:hidden" /></Button>
       </div>
-    );
-  };
+    </div>
+  );
 
   const renderDays = () => {
     const dateFormat = "EEEE";
@@ -57,7 +63,7 @@ export default function AppCalendar() {
     let startDate = startOfWeek(currentMonth);
     for (let i = 0; i < 7; i++) {
       days.push(
-            <div className="text-center text-[10px] md:text-xs font-semibold uppercase tracking-wider text-gray-900 py-1 md:py-2" key={i}>
+        <div className="text-center text-[10px] md:text-xs font-semibold uppercase tracking-wider text-gray-900 py-1 md:py-2" key={i}>
           {format(addDays(startDate, i), dateFormat)}
         </div>
       );
@@ -72,28 +78,22 @@ export default function AppCalendar() {
     const endDate = endOfWeek(monthEnd);
     const today = startOfToday();
 
-    const dateFormat = "d";
     const rows = [];
     let days = [];
     let day = startDate;
-    let formattedDate = "";
 
     while (day <= endDate) {
       for (let i = 0; i < 7; i++) {
-        formattedDate = format(day, dateFormat);
         const cloneDay = day;
-
         const dayMeetings = meetings.filter(m => isSameDay(parseISO(m.date), cloneDay));
         const hasMeeting = dayMeetings.length > 0;
-
         const dayProjects = projects.filter(p => {
-          const sDate = parseISO(p.startDate);
-          const eDate = parseISO(p.deadline);
-          return (day >= sDate && day <= eDate) || isSameDay(sDate, day) || isSameDay(eDate, day);
+          const s = parseISO(p.startDate); const e = parseISO(p.deadline);
+          return day >= s && day <= e;
         });
-
         const isTodayDate = isToday(day);
         const isPastDate = isBefore(day, today) && !isTodayDate;
+        const hasEvents = dayMeetings.length > 0 || dayProjects.length > 0;
 
         days.push(
           <div
@@ -101,7 +101,7 @@ export default function AppCalendar() {
               ${!isSameMonth(day, monthStart) ? "text-gray-300 bg-white/50" : ""}
               ${isTodayDate ? "bg-orange-50 border-orange-300" : ""}
               ${isPastDate && isSameMonth(day, monthStart) ? "bg-gray-50" : ""}
-              ${!isTodayDate && !isPastDate && isSameMonth(day, monthStart) ? (hasMeeting ? "bg-orange-100 hover:bg-orange-500 hover:text-white" : "hover:bg-gray-100 bg-white") : ""}
+              ${!isTodayDate && !isPastDate && isSameMonth(day, monthStart) ? (hasEvents ? "bg-orange-100 hover:bg-orange-500 hover:text-white" : "hover:bg-gray-100 bg-white") : ""}
             `}
             key={day.toString()}
             onClick={() => onDateClick(cloneDay)}
@@ -109,11 +109,11 @@ export default function AppCalendar() {
             <span className={`text-[10px] md:text-xs font-semibold self-end mr-1 
               ${isTodayDate ? 'bg-orange-500 text-white w-5 h-5 md:w-6 md:h-6 flex items-center justify-center rounded-full' : ''}
               ${isPastDate && !isTodayDate ? 'text-gray-400' : ''}
-              ${hasMeeting && !isTodayDate && !isPastDate ? 'text-orange-700' : ''}
+              ${hasEvents && !isTodayDate && !isPastDate ? 'text-orange-700' : ''}
             `}>
-              {formattedDate}
+              {format(day, "d")}
             </span>
-            <div className="flex-1 overflow-y-auto no-scrollbar mt-1 space-y-1 hide-scrollbar min-w-0">
+            <div className="flex-1 overflow-y-auto no-scrollbar mt-1 space-y-1">
               {dayMeetings.map(m => {
                 const client = clients.find(c => c.id === m.clientId);
                 return (
@@ -123,24 +123,17 @@ export default function AppCalendar() {
                 );
               })}
               {dayProjects.map(p => {
-                const sDate = parseISO(p.startDate);
-                const eDate = parseISO(p.deadline);
-                const isStart = isSameDay(sDate, cloneDay);
-                const isEnd = isSameDay(eDate, cloneDay);
-                const daysUntilEnd = differenceInDays(eDate, cloneDay);
-                
+                const isStart = isSameDay(parseISO(p.startDate), cloneDay);
+                const daysUntilEnd = differenceInDays(parseISO(p.deadline), cloneDay);
                 let dotColor = "bg-gray-500";
                 if (p.status === 'In Progress') dotColor = "bg-blue-500";
                 if (daysUntilEnd >= 0 && daysUntilEnd <= 3 && p.status !== 'Completed') dotColor = "bg-red-500";
                 if (isStart) dotColor = "bg-green-500";
                 if (p.status === 'Completed') dotColor = "bg-emerald-500";
-
-                const showText = isStart || isEnd || day.getDay() === 1 || p.title.length > 0;
-
                 return (
-                  <div key={p.id} className="flex items-center space-x-1 px-1 truncate min-w-0">
+                  <div key={p.id} className="flex items-center space-x-1 px-1 truncate">
                     <div className={`w-1 md:w-1.5 h-1 md:h-1.5 rounded-full ${dotColor} shrink-0`} />
-                  {showText && <span className="text-[8px] md:text-[10px] text-gray-900 truncate">{p.title}</span>}
+                    <span className="text-[8px] md:text-[10px] text-gray-900 truncate">{p.title}</span>
                   </div>
                 );
               })}
@@ -149,28 +142,78 @@ export default function AppCalendar() {
         );
         day = addDays(day, 1);
       }
-      rows.push(
-        <div className="grid grid-cols-7" key={day.toString()}>
-          {days}
-        </div>
-      );
+      rows.push(<div className="grid grid-cols-7" key={day.toString()}>{days}</div>);
       days = [];
     }
     return <div className="flex flex-col border border-gray-200">{rows}</div>;
   };
 
+  const renderDetailPanel = () => {
+    if (!detailDate) return null;
+    const dayMeetings = meetings.filter(m => isSameDay(parseISO(m.date), detailDate));
+    const dayProjects = projects.filter(p => {
+      const s = parseISO(p.startDate); const e = parseISO(p.deadline);
+      return detailDate >= s && detailDate <= e;
+    });
+
+    return (
+      <Card className="p-4 md:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold text-lg">{format(detailDate, 'MMMM d, yyyy')}</h2>
+          <div className="flex items-center space-x-2">
+            <Button className="px-3 py-1 text-xs" onClick={() => { setSelectedDate(detailDate); setShowModal(true); }}>+ Add</Button>
+            <button onClick={() => setDetailDate(null)} className="text-gray-900 hover:text-gray-400 p-1 cursor-pointer"><X size={16} /></button>
+          </div>
+        </div>
+        {dayMeetings.length === 0 && dayProjects.length === 0 ? (
+          <div className="text-gray-900 text-sm italic">No events on this day.</div>
+        ) : (
+          <div className="space-y-3">
+            {dayMeetings.map(m => {
+              const client = clients.find(c => c.id === m.clientId);
+              return (
+                <div key={m.id} className="flex items-start justify-between p-3 bg-orange-50 rounded-xl border border-orange-200 cursor-pointer hover:bg-orange-100 transition-colors" onClick={() => { setEditingMeeting(m); setShowModal(true); }}>
+                  <div>
+                    <div className="font-medium text-sm">{client?.name || m.leadName || m.title}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">{m.time} &bull; {m.reason || 'No reason'}</div>
+                  </div>
+                  <button onClick={(e) => { e.stopPropagation(); deleteMeeting(m.id); }} className="text-gray-900 hover:text-red-500 p-1 cursor-pointer"><X size={14} /></button>
+                </div>
+              );
+            })}
+            {dayProjects.map(p => (
+              <div key={p.id} className="p-3 bg-blue-50 rounded-xl border border-blue-200">
+                <div className="font-medium text-sm">{p.title}</div>
+                <div className="text-xs text-gray-500 mt-0.5">{p.status} &bull; {format(parseISO(p.startDate), 'MMM d')} - {format(parseISO(p.deadline), 'MMM d')}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    );
+  };
+
   return (
-    <div className="flex flex-col space-y-6">
-      {renderHeader()}
-      {renderDays()}
-      {renderCells()}
+    <div className="flex flex-col lg:flex-row lg:space-x-6 space-y-6 lg:space-y-0">
+      <div className="flex-1 flex flex-col space-y-6">
+        {renderHeader()}
+        {renderDays()}
+        {renderCells()}
+      </div>
+      {detailDate && (
+        <div className="lg:w-80 shrink-0">
+          {renderDetailPanel()}
+        </div>
+      )}
       
       <MeetingModal 
         isOpen={showModal} 
-        onClose={() => setShowModal(false)} 
+        onClose={() => { setShowModal(false); setEditingMeeting(null); setSelectedDate(null); }} 
         onSave={addMeeting}
+        onUpdate={updateMeeting}
         clients={clients}
         initialDate={selectedDate}
+        editItem={editingMeeting}
       />
     </div>
   );
@@ -180,11 +223,13 @@ interface MeetingModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (item: Omit<Meeting, 'id' | 'createdAt'>) => void;
+  onUpdate?: (id: string, updates: Partial<Meeting>) => void;
   clients: Client[];
   initialDate: Date | null;
+  editItem?: Meeting | null;
 }
 
-function MeetingModal({ isOpen, onClose, onSave, clients, initialDate }: MeetingModalProps) {
+function MeetingModal({ isOpen, onClose, onSave, onUpdate, clients, initialDate, editItem }: MeetingModalProps) {
   const [title, setTitle] = useState('');
   const [clientId, setClientId] = useState('');
   const [leadName, setLeadName] = useState('');
@@ -194,8 +239,12 @@ function MeetingModal({ isOpen, onClose, onSave, clients, initialDate }: Meeting
   const [error, setError] = useState('');
 
   React.useEffect(() => {
-    if (initialDate) setDate(initialDate);
-  }, [initialDate]);
+    if (editItem) {
+      setTitle(editItem.title); setClientId(editItem.clientId || ''); setLeadName(editItem.leadName || ''); setDate(new Date(editItem.date)); setTime(editItem.time); setReason(editItem.reason || '');
+    } else {
+      setTitle(''); setClientId(''); setLeadName(''); setDate(initialDate || new Date()); setTime('10:00'); setReason('');
+    }
+  }, [editItem, initialDate, isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -220,19 +269,30 @@ function MeetingModal({ isOpen, onClose, onSave, clients, initialDate }: Meeting
       ? (clients.find(c => c.id === clientId)?.name + ' Meeting')
       : (leadName + ' Meeting'));
 
-    onSave({
-      title: generatedTitle,
-      clientId: clientId || undefined,
-      leadName: leadName || undefined,
-      date: format(date, 'yyyy-MM-dd'),
-      time,
-      reason: reason || undefined,
-    });
+    if (editItem && onUpdate) {
+      onUpdate(editItem.id, {
+        title: generatedTitle,
+        clientId: clientId || undefined,
+        leadName: leadName || undefined,
+        date: format(date, 'yyyy-MM-dd'),
+        time,
+        reason: reason || undefined,
+      });
+    } else {
+      onSave({
+        title: generatedTitle,
+        clientId: clientId || undefined,
+        leadName: leadName || undefined,
+        date: format(date, 'yyyy-MM-dd'),
+        time,
+        reason: reason || undefined,
+      });
+    }
     onClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Schedule Meeting">
+    <Modal isOpen={isOpen} onClose={onClose} title={editItem ? 'Edit Meeting' : 'Schedule Meeting'}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <Label>Client</Label>
@@ -263,7 +323,7 @@ function MeetingModal({ isOpen, onClose, onSave, clients, initialDate }: Meeting
         
         {error && <div className="text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg">{error}</div>}
         
-        <Button type="submit" className="w-full mt-4">Save Meeting</Button>
+        <Button type="submit" className="w-full mt-4">{editItem ? 'Update Meeting' : 'Save Meeting'}</Button>
       </form>
     </Modal>
   );

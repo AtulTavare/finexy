@@ -28,8 +28,8 @@ export default function Business() {
     leads, addLead, updateLead, deleteLead,
     clients, addClient, updateClient, deleteClient,
     engagements, addEngagement, updateEngagement, deleteEngagement,
-    businessPayments, addBusinessPayment, deleteBusinessPayment,
-    businessExpenses, addBusinessExpense, deleteBusinessExpense
+    businessPayments, addBusinessPayment, updateBusinessPayment, deleteBusinessPayment,
+    businessExpenses, addBusinessExpense, updateBusinessExpense, deleteBusinessExpense
   } = useData();
 
   const [showLeadModal, setShowLeadModal] = useState(false);
@@ -37,6 +37,11 @@ export default function Business() {
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showClientModal, setShowClientModal] = useState(false);
   const [showEngagementModal, setShowEngagementModal] = useState(false);
+  const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [editingPayment, setEditingPayment] = useState<BusinessPayment | null>(null);
+  const [editingExpense, setEditingExpense] = useState<BusinessExpense | null>(null);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [editingEngagement, setEditingEngagement] = useState<Engagement | null>(null);
 
   const location = useLocation();
 
@@ -131,18 +136,18 @@ export default function Business() {
       </div>
 
       <div>
-        {activeTab === 'pipeline' && <PipelineView leads={filteredLeads} updateLead={updateLead} deleteLead={deleteLead} />}
-        {activeTab === 'clients' && <ClientsView clients={filteredClients} />}
-        {activeTab === 'engagements' && <EngagementsView engagements={filteredEngagements} clients={clients} />}
-        {activeTab === 'payments' && <PaymentsView payments={filteredPayments} clients={clients} engagements={engagements} deletePayment={deleteBusinessPayment} />}
-        {activeTab === 'expenses' && <ExpensesView expenses={filteredExpenses} deleteExpense={deleteBusinessExpense} />}
+        {activeTab === 'pipeline' && <PipelineView leads={filteredLeads} updateLead={updateLead} deleteLead={deleteLead} onEdit={(lead) => { setEditingLead(lead); setShowLeadModal(true); }} />}
+        {activeTab === 'clients' && <ClientsView clients={filteredClients} onEdit={(c) => { setEditingClient(c); setShowClientModal(true); }} />}
+        {activeTab === 'engagements' && <EngagementsView engagements={filteredEngagements} clients={clients} onEdit={(e) => { setEditingEngagement(e); setShowEngagementModal(true); }} />}
+        {activeTab === 'payments' && <PaymentsView payments={filteredPayments} clients={clients} engagements={engagements} deletePayment={deleteBusinessPayment} onEdit={(p) => { setEditingPayment(p); setShowPaymentModal(true); }} />}
+        {activeTab === 'expenses' && <ExpensesView expenses={filteredExpenses} deleteExpense={deleteBusinessExpense} onEdit={(e) => { setEditingExpense(e); setShowExpenseModal(true); }} />}
       </div>
 
-      <LeadModal isOpen={showLeadModal} onClose={() => setShowLeadModal(false)} onSave={addLead} />
-      <PaymentModal isOpen={showPaymentModal} onClose={() => setShowPaymentModal(false)} onSaveIncoming={addBusinessPayment} onSaveOutgoing={addBusinessExpense} clients={filteredClients} engagements={filteredEngagements} />
-      <BusinessExpenseModal isOpen={showExpenseModal} onClose={() => setShowExpenseModal(false)} onSave={addBusinessExpense} />
-      <ClientModal isOpen={showClientModal} onClose={() => setShowClientModal(false)} onSave={addClient} />
-      <EngagementModal isOpen={showEngagementModal} onClose={() => setShowEngagementModal(false)} onSave={addEngagement} clients={clients} />
+      <LeadModal isOpen={showLeadModal} onClose={() => { setShowLeadModal(false); setEditingLead(null); }} onSave={addLead} onUpdate={updateLead} editItem={editingLead} />
+      <PaymentModal isOpen={showPaymentModal} onClose={() => { setShowPaymentModal(false); setEditingPayment(null); }} onSaveIncoming={addBusinessPayment} onUpdateIncoming={updateBusinessPayment} onSaveOutgoing={addBusinessExpense} onUpdateOutgoing={updateBusinessExpense} clients={filteredClients} engagements={filteredEngagements} editItem={editingPayment} />
+      <BusinessExpenseModal isOpen={showExpenseModal} onClose={() => { setShowExpenseModal(false); setEditingExpense(null); }} onSave={addBusinessExpense} onUpdate={updateBusinessExpense} editItem={editingExpense} />
+      <ClientModal isOpen={showClientModal} onClose={() => { setShowClientModal(false); setEditingClient(null); }} onSave={addClient} onUpdate={updateClient} editItem={editingClient} />
+      <EngagementModal isOpen={showEngagementModal} onClose={() => { setShowEngagementModal(false); setEditingEngagement(null); }} onSave={addEngagement} onUpdate={updateEngagement} clients={clients} editItem={editingEngagement} />
     </div>
   );
 }
@@ -151,9 +156,10 @@ interface PipelineViewProps {
   leads: Lead[];
   updateLead: (id: string, updates: Partial<Lead>) => void;
   deleteLead: (id: string) => void;
+  onEdit: (lead: Lead) => void;
 }
 
-function PipelineView({ leads, updateLead, deleteLead }: PipelineViewProps) {
+function PipelineView({ leads, updateLead, deleteLead, onEdit }: PipelineViewProps) {
   const stages = ['Lead', 'Qualified', 'Proposal Sent', 'Negotiation', 'Won', 'Lost'];
   const [stageFilter, setStageFilter] = useState('All');
 
@@ -174,7 +180,7 @@ function PipelineView({ leads, updateLead, deleteLead }: PipelineViewProps) {
               {stageLeads.length === 0 ? (
                 <div className="text-[10px] text-gray-400 text-center italic py-4">No leads</div>
               ) : stageLeads.map(l => (
-                <div key={l.id} className="bg-white border border-gray-200 p-2 shadow-sm hover:border-orange-500 rounded-lg transition-colors group">
+                <div key={l.id} className="bg-white border border-gray-200 p-2 shadow-sm hover:border-orange-500 rounded-lg transition-colors group cursor-pointer" onClick={() => onEdit(l)}>
                   <div className="flex justify-between items-start mb-1">
                     <div className="font-medium text-xs text-gray-900 truncate">{l.name}</div>
                     <Badge className="shrink-0 ml-1 !text-[9px] !px-1.5">{l.brand}</Badge>
@@ -223,7 +229,7 @@ function PipelineView({ leads, updateLead, deleteLead }: PipelineViewProps) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {filteredLeads.map(l => (
-            <div key={l.id} className="bg-white border border-gray-200 p-3 shadow-sm hover:border-orange-500 rounded-xl transition-colors">
+            <div key={l.id} className="bg-white border border-gray-200 p-3 shadow-sm hover:border-orange-500 rounded-xl transition-colors cursor-pointer" onClick={() => onEdit(l)}>
               <div className="flex justify-between items-start mb-1">
                 <div className="font-medium text-sm text-gray-900">{l.name}</div>
                 <Badge>{l.brand}</Badge>
@@ -262,9 +268,10 @@ function PipelineView({ leads, updateLead, deleteLead }: PipelineViewProps) {
 
 interface ClientsViewProps {
   clients: Client[];
+  onEdit: (client: Client) => void;
 }
 
-function ClientsView({ clients }: ClientsViewProps) {
+function ClientsView({ clients, onEdit }: ClientsViewProps) {
   if (clients.length === 0) return <div className="text-gray-900 italic">No clients yet.</div>;
   return (
     <Card className="p-0 bg-white">
@@ -279,7 +286,7 @@ function ClientsView({ clients }: ClientsViewProps) {
         </thead>
         <tbody>
           {clients.map((c: any) => (
-            <tr key={c.id} className="border-b border-gray-200 hover:bg-gray-50">
+            <tr key={c.id} className="border-b border-gray-200 hover:bg-gray-50 cursor-pointer" onClick={() => onEdit(c)}>
               <td className="p-4 md:p-6 font-medium">
                 <div>{c.name}</div>
                 <div className="md:hidden text-[10px] text-gray-500 mt-0.5">{c.contact}</div>
@@ -307,9 +314,10 @@ function ClientsView({ clients }: ClientsViewProps) {
 interface EngagementsViewProps {
   engagements: Engagement[];
   clients: Client[];
+  onEdit: (engagement: Engagement) => void;
 }
 
-function EngagementsView({ engagements, clients }: EngagementsViewProps) {
+function EngagementsView({ engagements, clients, onEdit }: EngagementsViewProps) {
   if (engagements.length === 0) return <div className="text-gray-900 italic">No engagements yet.</div>;
   return (
     <Card className="p-0 bg-white">
@@ -326,7 +334,7 @@ function EngagementsView({ engagements, clients }: EngagementsViewProps) {
           {engagements.map((e: any) => {
             const client = clients.find((c: any) => c.id === e.clientId);
             return (
-              <tr key={e.id} className="border-b border-gray-200 hover:bg-gray-50">
+              <tr key={e.id} className="border-b border-gray-200 hover:bg-gray-50 cursor-pointer" onClick={() => onEdit(e)}>
                 <td className="p-4 md:p-6 font-medium">{client?.name || 'Unknown'} <Badge className="ml-2">{e.brand}</Badge></td>
                 <td className="p-4 md:p-6 text-gray-900 hidden md:table-cell">{e.paymentTerms} (Started {format(new Date(e.startDate), 'MMM yyyy')})</td>
                 <td className="p-4 md:p-6 text-right tabular text-emerald-500 font-semibold">{formatCurrency(e.value)}</td>
@@ -347,9 +355,10 @@ interface PaymentsViewProps {
   clients: Client[];
   engagements: Engagement[];
   deletePayment: (id: string) => void;
+  onEdit: (payment: BusinessPayment) => void;
 }
 
-function PaymentsView({ payments, clients, engagements, deletePayment }: PaymentsViewProps) {
+function PaymentsView({ payments, clients, engagements, deletePayment, onEdit }: PaymentsViewProps) {
   if (payments.length === 0) return <div className="text-gray-900 italic">No payments recorded yet.</div>;
   return (
     <Card className="p-0 bg-white">
@@ -366,7 +375,7 @@ function PaymentsView({ payments, clients, engagements, deletePayment }: Payment
           {payments.map((p: any) => {
             const client = clients.find((c: any) => c.id === p.clientId);
             return (
-              <tr key={p.id} className="border-b border-gray-200 hover:bg-gray-50">
+              <tr key={p.id} className="border-b border-gray-200 hover:bg-gray-50 cursor-pointer" onClick={() => onEdit(p)}>
                 <td className="p-4 md:p-6 text-gray-900">{format(new Date(p.date), 'MMM d, yyyy')}</td>
                 <td className="p-4 md:p-6">
                   <div className="font-medium">{client?.name || 'Unknown'} <Badge className="ml-2">{p.brand}</Badge></div>
@@ -374,7 +383,7 @@ function PaymentsView({ payments, clients, engagements, deletePayment }: Payment
                 </td>
                 <td className="p-4 md:p-6 text-right tabular text-emerald-500 font-semibold">+{formatCurrency(p.amount)}</td>
                 <td className="p-4 md:p-6 text-right">
-                  <button onClick={() => { deletePayment(p.id) }} className="text-gray-900 hover:text-red-500 p-1 cursor-pointer"><Trash2 size={14} /></button>
+                  <button onClick={(e) => { e.stopPropagation(); deletePayment(p.id); }} className="text-gray-900 hover:text-red-500 p-1 cursor-pointer"><Trash2 size={14} /></button>
                 </td>
               </tr>
             );
@@ -388,9 +397,10 @@ function PaymentsView({ payments, clients, engagements, deletePayment }: Payment
 interface ExpensesViewProps {
   expenses: BusinessExpense[];
   deleteExpense: (id: string) => void;
+  onEdit: (expense: BusinessExpense) => void;
 }
 
-function ExpensesView({ expenses, deleteExpense }: ExpensesViewProps) {
+function ExpensesView({ expenses, deleteExpense, onEdit }: ExpensesViewProps) {
   if (expenses.length === 0) return <div className="text-gray-900 italic">No business expenses recorded yet.</div>;
   return (
     <Card className="p-0 bg-white">
@@ -405,7 +415,7 @@ function ExpensesView({ expenses, deleteExpense }: ExpensesViewProps) {
         </thead>
         <tbody>
           {expenses.map((e: any) => (
-            <tr key={e.id} className="border-b border-gray-200 hover:bg-gray-50">
+            <tr key={e.id} className="border-b border-gray-200 hover:bg-gray-50 cursor-pointer" onClick={() => onEdit(e)}>
               <td className="p-4 md:p-6 text-gray-900">{format(new Date(e.date), 'MMM d, yyyy')}</td>
               <td className="p-4 md:p-6">
                 <Badge>{e.brand}</Badge>
@@ -413,7 +423,7 @@ function ExpensesView({ expenses, deleteExpense }: ExpensesViewProps) {
               </td>
               <td className="p-4 md:p-6 text-right tabular text-red-500 font-semibold">-{formatCurrency(e.amount)}</td>
               <td className="p-4 md:p-6 text-right">
-                <button onClick={() => { deleteExpense(e.id) }} className="text-gray-900 hover:text-red-500 p-1 cursor-pointer"><Trash2 size={14} /></button>
+                <button onClick={(e2) => { e2.stopPropagation(); deleteExpense(e.id); }} className="text-gray-900 hover:text-red-500 p-1 cursor-pointer"><Trash2 size={14} /></button>
               </td>
             </tr>
           ))}
@@ -429,9 +439,11 @@ interface LeadModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (item: Omit<Lead, 'id' | 'createdAt'>) => void;
+  onUpdate?: (id: string, updates: Partial<Lead>) => void;
+  editItem?: Lead | null;
 }
 
-function LeadModal({ isOpen, onClose, onSave }: LeadModalProps) {
+function LeadModal({ isOpen, onClose, onSave, onUpdate, editItem }: LeadModalProps) {
   const [name, setName] = useState('');
   const [brand, setBrand] = useState<Brand>('Infinity Innovations');
   const [source, setSource] = useState('');
@@ -440,15 +452,33 @@ function LeadModal({ isOpen, onClose, onSave }: LeadModalProps) {
   const [nextAction, setNextAction] = useState('');
   const [nextActionDate, setNextActionDate] = useState(new Date());
 
+  useEffect(() => {
+    if (editItem) {
+      setName(editItem.name);
+      setBrand(editItem.brand);
+      setSource(editItem.source);
+      setStage(editItem.stage);
+      setEstimatedValue(editItem.estimatedValue.toString());
+      setNextAction(editItem.nextAction);
+      setNextActionDate(new Date(editItem.nextActionDate));
+    } else {
+      setName(''); setBrand('Infinity Innovations'); setSource(''); setStage('Lead'); setEstimatedValue(''); setNextAction(''); setNextActionDate(new Date());
+    }
+  }, [editItem, isOpen]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !estimatedValue) return;
-    onSave({ name, brand, source, stage, estimatedValue: parseFloat(estimatedValue), nextAction, nextActionDate: format(nextActionDate, 'yyyy-MM-dd') });
+    if (editItem && onUpdate) {
+      onUpdate(editItem.id, { name, brand, source, stage, estimatedValue: parseFloat(estimatedValue), nextAction, nextActionDate: format(nextActionDate, 'yyyy-MM-dd') });
+    } else {
+      onSave({ name, brand, source, stage, estimatedValue: parseFloat(estimatedValue), nextAction, nextActionDate: format(nextActionDate, 'yyyy-MM-dd') });
+    }
     onClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add Lead">
+    <Modal isOpen={isOpen} onClose={onClose} title={editItem ? 'Edit Lead' : 'Add Lead'}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div><Label>Name</Label><Input value={name} onChange={e => setName(e.target.value)} required /></div>
         <div>
@@ -461,7 +491,7 @@ function LeadModal({ isOpen, onClose, onSave }: LeadModalProps) {
         <div><Label>Estimated Value</Label><Input type="number" value={estimatedValue} onChange={e => setEstimatedValue(e.target.value)} required /></div>
         <div><Label>Next Action</Label><Input value={nextAction} onChange={e => setNextAction(e.target.value)} /></div>
         <div><Label>Next Action Date</Label><DatePicker value={nextActionDate} onChange={setNextActionDate} /></div>
-        <Button type="submit" className="w-full mt-4">Save Lead</Button>
+        <Button type="submit" className="w-full mt-4">{editItem ? 'Update Lead' : 'Save Lead'}</Button>
       </form>
     </Modal>
   );
@@ -471,12 +501,15 @@ interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSaveIncoming: (item: Omit<BusinessPayment, 'id' | 'createdAt'>) => void;
+  onUpdateIncoming?: (id: string, updates: Partial<BusinessPayment>) => void;
   onSaveOutgoing: (item: Omit<BusinessExpense, 'id' | 'createdAt'>) => void;
+  onUpdateOutgoing?: (id: string, updates: Partial<BusinessExpense>) => void;
   clients: Client[];
   engagements: Engagement[];
+  editItem?: BusinessPayment | null;
 }
 
-function PaymentModal({ isOpen, onClose, onSaveIncoming, onSaveOutgoing, clients, engagements }: PaymentModalProps) {
+function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSaveOutgoing, onUpdateOutgoing, clients, engagements, editItem }: PaymentModalProps) {
   const [type, setType] = useState<'incoming' | 'outgoing'>('incoming');
   
   const [clientId, setClientId] = useState('');
@@ -488,14 +521,32 @@ function PaymentModal({ isOpen, onClose, onSaveIncoming, onSaveOutgoing, clients
   const [brand, setBrand] = useState<Brand>('Infinity Innovations');
   const [category, setCategory] = useState<BusinessExpense['category']>('Tools');
 
+  useEffect(() => {
+    if (editItem) {
+      setType('incoming');
+      setClientId(editItem.clientId);
+      setEngagementId(editItem.engagementId);
+      setAmount(editItem.amount.toString());
+      setDate(new Date(editItem.date));
+      setInvoiceReference(editItem.invoiceReference);
+    } else {
+      setType('incoming');
+      setClientId(''); setEngagementId(''); setAmount(''); setDate(new Date()); setInvoiceReference(''); setBrand('Infinity Innovations'); setCategory('Tools');
+    }
+  }, [editItem, isOpen]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount) return;
     
     if (type === 'incoming') {
-      if (!clientId) return;
-      const client = clients.find((c: any) => c.id === clientId);
-      onSaveIncoming({ clientId, engagementId, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd'), invoiceReference, brand: client?.brand || 'Infinity Innovations' });
+      if (editItem && onUpdateIncoming) {
+        onUpdateIncoming(editItem.id, { clientId, engagementId, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd'), invoiceReference });
+      } else {
+        if (!clientId) return;
+        const client = clients.find((c: any) => c.id === clientId);
+        onSaveIncoming({ clientId, engagementId, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd'), invoiceReference, brand: client?.brand || 'Infinity Innovations' });
+      }
     } else {
       onSaveOutgoing({ brand, category, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd') });
     }
@@ -503,23 +554,25 @@ function PaymentModal({ isOpen, onClose, onSaveIncoming, onSaveOutgoing, clients
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Log Transaction">
-      <div className="flex bg-gray-100 p-1 mb-4 rounded-xl">
-        <button 
-          type="button"
-          className={`flex-1 px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg transition-all ${type === 'incoming' ? 'bg-[#18181b] text-white shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
-          onClick={() => setType('incoming')}
-        >
-          Incoming
-        </button>
-        <button 
-          type="button"
-          className={`flex-1 px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg transition-all ${type === 'outgoing' ? 'bg-[#18181b] text-white shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
-          onClick={() => setType('outgoing')}
-        >
-          Outgoing
-        </button>
-      </div>
+    <Modal isOpen={isOpen} onClose={onClose} title={editItem ? 'Edit Payment' : 'Log Transaction'}>
+      {!editItem && (
+        <div className="flex bg-gray-100 p-1 mb-4 rounded-xl">
+          <button 
+            type="button"
+            className={`flex-1 px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg transition-all ${type === 'incoming' ? 'bg-[#18181b] text-white shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+            onClick={() => setType('incoming')}
+          >
+            Incoming
+          </button>
+          <button 
+            type="button"
+            className={`flex-1 px-4 py-2 text-xs font-semibold uppercase tracking-wider rounded-lg transition-all ${type === 'outgoing' ? 'bg-[#18181b] text-white shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
+            onClick={() => setType('outgoing')}
+          >
+            Outgoing
+          </button>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {type === 'incoming' ? (
@@ -569,7 +622,7 @@ function PaymentModal({ isOpen, onClose, onSaveIncoming, onSaveOutgoing, clients
             <div><Label>Date</Label><DatePicker value={date} onChange={setDate} /></div>
           </>
         )}
-        <Button type="submit" className="w-full mt-4" disabled={type === 'incoming' && clients.length === 0}>Save {type === 'incoming' ? 'Payment' : 'Expense'}</Button>
+        <Button type="submit" className="w-full mt-4" disabled={type === 'incoming' && clients.length === 0 && !editItem}>{editItem ? 'Update Payment' : `Save ${type === 'incoming' ? 'Payment' : 'Expense'}`}</Button>
       </form>
     </Modal>
   );
@@ -579,23 +632,40 @@ interface BusinessExpenseModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (item: Omit<BusinessExpense, 'id' | 'createdAt'>) => void;
+  onUpdate?: (id: string, updates: Partial<BusinessExpense>) => void;
+  editItem?: BusinessExpense | null;
 }
 
-function BusinessExpenseModal({ isOpen, onClose, onSave }: BusinessExpenseModalProps) {
+function BusinessExpenseModal({ isOpen, onClose, onSave, onUpdate, editItem }: BusinessExpenseModalProps) {
   const [brand, setBrand] = useState<Brand>('Infinity Innovations');
   const [category, setCategory] = useState<BusinessExpense['category']>('Tools');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date());
 
+  useEffect(() => {
+    if (editItem) {
+      setBrand(editItem.brand);
+      setCategory(editItem.category as BusinessExpense['category']);
+      setAmount(editItem.amount.toString());
+      setDate(new Date(editItem.date));
+    } else {
+      setBrand('Infinity Innovations'); setCategory('Tools'); setAmount(''); setDate(new Date());
+    }
+  }, [editItem, isOpen]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount) return;
-    onSave({ brand, category, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd') });
+    if (editItem && onUpdate) {
+      onUpdate(editItem.id, { brand, category, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd') });
+    } else {
+      onSave({ brand, category, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd') });
+    }
     onClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add Business Expense">
+    <Modal isOpen={isOpen} onClose={onClose} title={editItem ? 'Edit Business Expense' : 'Add Business Expense'}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <Label>Brand</Label>
@@ -618,7 +688,7 @@ function BusinessExpenseModal({ isOpen, onClose, onSave }: BusinessExpenseModalP
         </div>
         <div><Label>Amount</Label><Input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} required /></div>
         <div><Label>Date</Label><DatePicker value={date} onChange={setDate} /></div>
-        <Button type="submit" className="w-full mt-4">Save Expense</Button>
+        <Button type="submit" className="w-full mt-4">{editItem ? 'Update Expense' : 'Save Expense'}</Button>
       </form>
     </Modal>
   );
@@ -628,9 +698,11 @@ interface ClientModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (item: Omit<Client, 'id' | 'createdAt'>) => void;
+  onUpdate?: (id: string, updates: Partial<Client>) => void;
+  editItem?: Client | null;
 }
 
-function ClientModal({ isOpen, onClose, onSave }: ClientModalProps) {
+function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModalProps) {
   const [name, setName] = useState('');
   const [brand, setBrand] = useState<Brand>('Infinity Innovations');
   const [contact, setContact] = useState('');
@@ -640,6 +712,14 @@ function ClientModal({ isOpen, onClose, onSave }: ClientModalProps) {
   const [services, setServices] = useState<string[]>([]);
   const [status, setStatus] = useState<'Active' | 'Paused' | 'Churned'>('Active');
 
+  useEffect(() => {
+    if (editItem) {
+      setName(editItem.name); setBrand(editItem.brand); setContact(editItem.contact); setMail(editItem.mail); setAddress(editItem.address); setBusinessName(editItem.businessName); setServices(editItem.services); setStatus(editItem.status);
+    } else {
+      setName(''); setBrand('Infinity Innovations'); setContact(''); setMail(''); setAddress(''); setBusinessName(''); setServices([]); setStatus('Active');
+    }
+  }, [editItem, isOpen]);
+
   const toggleService = (s: string) => {
     setServices(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
   };
@@ -647,12 +727,16 @@ function ClientModal({ isOpen, onClose, onSave }: ClientModalProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name) return;
-    onSave({ name, brand, contact, mail, address, businessName, services, status });
+    if (editItem && onUpdate) {
+      onUpdate(editItem.id, { name, brand, contact, mail, address, businessName, services, status });
+    } else {
+      onSave({ name, brand, contact, mail, address, businessName, services, status });
+    }
     onClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add Client">
+    <Modal isOpen={isOpen} onClose={onClose} title={editItem ? 'Edit Client' : 'Add Client'}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div><Label>Name</Label><Input value={name} onChange={e => setName(e.target.value)} required /></div>
         <div className="grid grid-cols-2 gap-4">
@@ -691,7 +775,7 @@ function ClientModal({ isOpen, onClose, onSave }: ClientModalProps) {
             ))}
           </div>
         </div>
-        <Button type="submit" className="w-full mt-4">Save Client</Button>
+        <Button type="submit" className="w-full mt-4">{editItem ? 'Update Client' : 'Save Client'}</Button>
       </form>
     </Modal>
   );
@@ -701,10 +785,12 @@ interface EngagementModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (item: Omit<Engagement, 'id' | 'createdAt'>) => void;
+  onUpdate?: (id: string, updates: Partial<Engagement>) => void;
   clients: Client[];
+  editItem?: Engagement | null;
 }
 
-function EngagementModal({ isOpen, onClose, onSave, clients }: EngagementModalProps) {
+function EngagementModal({ isOpen, onClose, onSave, onUpdate, clients, editItem }: EngagementModalProps) {
   const [clientId, setClientId] = useState('');
   const [brand, setBrand] = useState<Brand>('Infinity Innovations');
   const [type, setType] = useState<'Project' | 'Retainer'>('Project');
@@ -712,16 +798,29 @@ function EngagementModal({ isOpen, onClose, onSave, clients }: EngagementModalPr
   const [value, setValue] = useState('');
   const [status, setStatus] = useState<'Active' | 'Completed' | 'On Hold'>('Active');
   const [startDate, setStartDate] = useState(new Date());
+
+  useEffect(() => {
+    if (editItem) {
+      setClientId(editItem.clientId); setBrand(editItem.brand); setType(editItem.type); setPaymentTerms(editItem.paymentTerms); setValue(editItem.value.toString()); setStatus(editItem.status); setStartDate(new Date(editItem.startDate));
+    } else {
+      setClientId(''); setBrand('Infinity Innovations'); setType('Project'); setPaymentTerms('Milestones'); setValue(''); setStatus('Active'); setStartDate(new Date());
+    }
+  }, [editItem, isOpen]);
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!clientId || !value) return;
-    onSave({ clientId, brand, type, paymentTerms, value: parseFloat(value), status, startDate: format(startDate, 'yyyy-MM-dd') });
+    if (!value) return;
+    if (editItem && onUpdate) {
+      onUpdate(editItem.id, { brand, type, paymentTerms, value: parseFloat(value), status, startDate: format(startDate, 'yyyy-MM-dd') });
+    } else {
+      if (!clientId) return;
+      onSave({ clientId, brand, type, paymentTerms, value: parseFloat(value), status, startDate: format(startDate, 'yyyy-MM-dd') });
+    }
     onClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add Engagement">
+    <Modal isOpen={isOpen} onClose={onClose} title={editItem ? 'Edit Engagement' : 'Add Engagement'}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <Label>Client</Label>
@@ -766,7 +865,7 @@ function EngagementModal({ isOpen, onClose, onSave, clients }: EngagementModalPr
         <div><Label>Value</Label><Input type="number" step="0.01" value={value} onChange={e => setValue(e.target.value)} required /></div>
         <div><Label>Start Date</Label><DatePicker value={startDate} onChange={setStartDate} /></div>
         
-        <Button type="submit" className="w-full mt-4">Save Engagement</Button>
+        <Button type="submit" className="w-full mt-4">{editItem ? 'Update Engagement' : 'Save Engagement'}</Button>
       </form>
     </Modal>
   );

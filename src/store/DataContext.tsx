@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
   PulseData, PersonalIncome, PersonalExpense, PersonalDebt,
   Lead, Client, Engagement, BusinessPayment, BusinessExpense,
-  Task, OwnerDraw, Project, Meeting,
+  Task, Project, Meeting,
 } from '../types';
 import { generateId, toCamelCase, toSnakeCase } from '../lib/utils';
 import { supabase } from '../lib/supabase';
@@ -30,8 +30,10 @@ interface DataContextType extends PulseData {
   updateEngagement: (id: string, updates: Partial<Engagement>) => void;
   deleteEngagement: (id: string) => void;
   addBusinessPayment: (item: Omit<BusinessPayment, 'id' | 'createdAt'>) => void;
+  updateBusinessPayment: (id: string, updates: Partial<BusinessPayment>) => void;
   deleteBusinessPayment: (id: string) => void;
   addBusinessExpense: (item: Omit<BusinessExpense, 'id' | 'createdAt'>) => void;
+  updateBusinessExpense: (id: string, updates: Partial<BusinessExpense>) => void;
   deleteBusinessExpense: (id: string) => void;
   addTask: (item: Omit<Task, 'id' | 'createdAt'>) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
@@ -42,7 +44,6 @@ interface DataContextType extends PulseData {
   addMeeting: (item: Omit<Meeting, 'id' | 'createdAt'>) => void;
   updateMeeting: (id: string, updates: Partial<Meeting>) => void;
   deleteMeeting: (id: string) => void;
-  processOwnerDraw: (amount: number, date: string) => void;
 }
 
 const emptyData: PulseData = {
@@ -55,7 +56,6 @@ const emptyData: PulseData = {
   businessPayments: [],
   businessExpenses: [],
   tasks: [],
-  ownerDraws: [],
   projects: [],
   meetings: [],
 };
@@ -65,7 +65,7 @@ const DataContext = createContext<DataContextType | null>(null);
 type TableName =
   | 'personal_income' | 'personal_expenses' | 'personal_debts'
   | 'leads' | 'clients' | 'engagements' | 'business_payments'
-  | 'business_expenses' | 'tasks' | 'projects' | 'meetings' | 'owner_draws';
+  | 'business_expenses' | 'tasks' | 'projects' | 'meetings';
 
 const TABLE_MAP: Record<keyof PulseData, TableName> = {
   personalIncome: 'personal_income',
@@ -79,7 +79,6 @@ const TABLE_MAP: Record<keyof PulseData, TableName> = {
   tasks: 'tasks',
   projects: 'projects',
   meetings: 'meetings',
-  ownerDraws: 'owner_draws',
 };
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
@@ -327,6 +326,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setArray('businessPayments', (prev) => [newItem, ...prev]);
   };
 
+  const updateBusinessPayment = (id: string, updates: Partial<BusinessPayment>) => {
+    dbUpdate('business_payments', id, updates);
+    setArray('businessPayments', (prev) =>
+      prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
+    );
+  };
+
   const deleteBusinessPayment = (id: string) => {
     dbDelete('business_payments', id);
     setArray('businessPayments', (prev) => prev.filter((p) => p.id !== id));
@@ -336,6 +342,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const newItem: BusinessExpense = { ...item, id: generateId(), createdAt: new Date().toISOString() };
     dbInsert('business_expenses', newItem);
     setArray('businessExpenses', (prev) => [newItem, ...prev]);
+  };
+
+  const updateBusinessExpense = (id: string, updates: Partial<BusinessExpense>) => {
+    dbUpdate('business_expenses', id, updates);
+    setArray('businessExpenses', (prev) =>
+      prev.map((e) => (e.id === id ? { ...e, ...updates } : e))
+    );
   };
 
   const deleteBusinessExpense = (id: string) => {
@@ -416,26 +429,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     setArray('meetings', (prev) => prev.filter((m) => m.id !== id));
   };
 
-  const processOwnerDraw = (amount: number, date: string) => {
-    const draw: OwnerDraw = { id: generateId(), amount, date, createdAt: new Date().toISOString() };
-    const income: PersonalIncome = {
-      id: generateId(),
-      source: 'Business Draw',
-      amount,
-      date,
-      category: 'Business Draw',
-      isRecurring: false,
-      createdAt: new Date().toISOString(),
-    };
-    dbInsert('owner_draws', draw);
-    dbInsert('personal_income', income);
-    setData((prev) => ({
-      ...prev,
-      ownerDraws: [draw, ...prev.ownerDraws],
-      personalIncome: [income, ...prev.personalIncome],
-    }));
-  };
-
   return (
     <DataContext.Provider
       value={{
@@ -447,12 +440,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         addLead, updateLead, deleteLead,
         addClient, updateClient, deleteClient,
         addEngagement, updateEngagement, deleteEngagement,
-        addBusinessPayment, deleteBusinessPayment,
-        addBusinessExpense, deleteBusinessExpense,
+        addBusinessPayment, updateBusinessPayment, deleteBusinessPayment,
+        addBusinessExpense, updateBusinessExpense, deleteBusinessExpense,
         addTask, updateTask, deleteTask,
         addProject, updateProject, deleteProject,
         addMeeting, updateMeeting, deleteMeeting,
-        processOwnerDraw,
       }}
     >
       {children}
