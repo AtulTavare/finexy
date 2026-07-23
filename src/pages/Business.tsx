@@ -144,7 +144,7 @@ export default function Business() {
       </div>
 
       <LeadModal isOpen={showLeadModal} onClose={() => { setShowLeadModal(false); setEditingLead(null); }} onSave={addLead} onUpdate={updateLead} editItem={editingLead} />
-      <PaymentModal isOpen={showPaymentModal} onClose={() => { setShowPaymentModal(false); setEditingPayment(null); }} onSaveIncoming={addBusinessPayment} onUpdateIncoming={updateBusinessPayment} onSaveOutgoing={addBusinessExpense} onUpdateOutgoing={updateBusinessExpense} clients={filteredClients} engagements={filteredEngagements} editItem={editingPayment} />
+      <PaymentModal isOpen={showPaymentModal} onClose={() => { setShowPaymentModal(false); setEditingPayment(null); }} onSaveIncoming={addBusinessPayment} onUpdateIncoming={updateBusinessPayment} onSaveOutgoing={addBusinessExpense} onUpdateOutgoing={updateBusinessExpense} clients={filteredClients} engagements={filteredEngagements} payments={businessPayments} editItem={editingPayment} />
       <BusinessExpenseModal isOpen={showExpenseModal} onClose={() => { setShowExpenseModal(false); setEditingExpense(null); }} onSave={addBusinessExpense} onUpdate={updateBusinessExpense} editItem={editingExpense} />
       <ClientModal isOpen={showClientModal} onClose={() => { setShowClientModal(false); setEditingClient(null); }} onSave={addClient} onUpdate={updateClient} editItem={editingClient} />
       <EngagementModal isOpen={showEngagementModal} onClose={() => { setShowEngagementModal(false); setEditingEngagement(null); }} onSave={addEngagement} onUpdate={updateEngagement} clients={clients} editItem={editingEngagement} />
@@ -500,20 +500,20 @@ function LeadModal({ isOpen, onClose, onSave, onUpdate, editItem }: LeadModalPro
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSaveIncoming: (item: Omit<BusinessPayment, 'id' | 'createdAt'>) => void;
+  onSaveIncoming: (item: Omit<BusinessPayment, 'id' | 'createdAt' | 'engagementId'>) => void;
   onUpdateIncoming?: (id: string, updates: Partial<BusinessPayment>) => void;
   onSaveOutgoing: (item: Omit<BusinessExpense, 'id' | 'createdAt'>) => void;
   onUpdateOutgoing?: (id: string, updates: Partial<BusinessExpense>) => void;
   clients: Client[];
   engagements: Engagement[];
+  payments: BusinessPayment[];
   editItem?: BusinessPayment | null;
 }
 
-function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSaveOutgoing, onUpdateOutgoing, clients, engagements, editItem }: PaymentModalProps) {
+function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSaveOutgoing, onUpdateOutgoing, clients, engagements, payments, editItem }: PaymentModalProps) {
   const [type, setType] = useState<'incoming' | 'outgoing'>('incoming');
   
   const [clientId, setClientId] = useState('');
-  const [engagementId, setEngagementId] = useState('');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date());
   const [invoiceReference, setInvoiceReference] = useState('');
@@ -521,17 +521,22 @@ function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSav
   const [brand, setBrand] = useState<Brand>('Infinity Innovations');
   const [category, setCategory] = useState<BusinessExpense['category']>('Tools');
 
+  const activeEngagement = engagements.find((e: any) => e.clientId === clientId && e.status === 'Active');
+  const collected = activeEngagement
+    ? payments.filter((p: any) => p.engagementId === activeEngagement.id).reduce((s: number, p: any) => s + p.amount, 0)
+    : 0;
+  const progress = activeEngagement ? Math.min(collected / activeEngagement.value, 1) : 0;
+
   useEffect(() => {
     if (editItem) {
       setType('incoming');
       setClientId(editItem.clientId);
-      setEngagementId(editItem.engagementId);
       setAmount(editItem.amount.toString());
       setDate(new Date(editItem.date));
       setInvoiceReference(editItem.invoiceReference);
     } else {
       setType('incoming');
-      setClientId(''); setEngagementId(''); setAmount(''); setDate(new Date()); setInvoiceReference(''); setBrand('Infinity Innovations'); setCategory('Tools');
+      setClientId(''); setAmount(''); setDate(new Date()); setInvoiceReference(''); setBrand('Infinity Innovations'); setCategory('Tools');
     }
   }, [editItem, isOpen]);
 
@@ -541,11 +546,11 @@ function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSav
     
     if (type === 'incoming') {
       if (editItem && onUpdateIncoming) {
-        onUpdateIncoming(editItem.id, { clientId, engagementId, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd'), invoiceReference });
+        onUpdateIncoming(editItem.id, { clientId, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd'), invoiceReference });
       } else {
         if (!clientId) return;
         const client = clients.find((c: any) => c.id === clientId);
-        onSaveIncoming({ clientId, engagementId, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd'), invoiceReference, brand: client?.brand || 'Infinity Innovations' });
+        onSaveIncoming({ clientId, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd'), invoiceReference, brand: client?.brand || 'Infinity Innovations' });
       }
     } else {
       onSaveOutgoing({ brand, category, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd') });
@@ -584,15 +589,19 @@ function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSav
                 {clients.map((c: any) => <option key={c.id} value={c.id}>{c.name} ({c.brand})</option>)}
               </Select>
             </div>
-            {clientId && (
-              <div>
-                <Label>Engagement (Optional)</Label>
-                <Select value={engagementId} onChange={e => setEngagementId(e.target.value)}>
-                  <option value="">None</option>
-                  {engagements.filter((e: any) => e.clientId === clientId).map((e: any) => <option key={e.id} value={e.id}>{formatCurrency(e.value)} - {e.paymentTerms}</option>)}
-                </Select>
+            {clientId && activeEngagement ? (
+              <div className="bg-gray-50 rounded-xl p-3 space-y-1">
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-500">{formatCurrency(collected)} collected of {formatCurrency(activeEngagement.value)}</span>
+                  <span className="font-semibold text-gray-800">{Math.round(progress * 100)}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-emerald-500 h-2 rounded-full transition-all" style={{ width: `${progress * 100}%` }} />
+                </div>
               </div>
-            )}
+            ) : clientId ? (
+              <div className="text-xs text-gray-400 italic">No active engagement — unlinked payment</div>
+            ) : null}
             <div><Label>Amount</Label><Input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} required /></div>
             <div><Label>Date</Label><DatePicker value={date} onChange={setDate} /></div>
             <div><Label>Invoice Reference</Label><Input value={invoiceReference} onChange={e => setInvoiceReference(e.target.value)} /></div>
