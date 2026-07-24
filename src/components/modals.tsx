@@ -203,11 +203,21 @@ export function ProjectModal({ isOpen, onClose, onSave, onUpdate, clients, editI
   };
 
   const updateBilling = (name: string, billing: 'one-time' | 'monthly') => {
-    setServicePricing(prev => prev.map(p => p.name === name ? { ...p, billing } : p));
+    if (billing === 'monthly') {
+      const existing = servicePricing.find(p => p.name === name);
+      const defaultEnd = existing?.endDate || format(new Date(new Date(existing?.startDate || Date.now()).getFullYear() + 1, 0, 1), 'yyyy-MM-dd');
+      setServicePricing(prev => prev.map(p => p.name === name ? { ...p, billing, endDate: defaultEnd } : p));
+    } else {
+      setServicePricing(prev => prev.map(p => p.name === name ? { ...p, billing } : p));
+    }
   };
 
   const updateStartDate = (name: string, date: Date) => {
     setServicePricing(prev => prev.map(p => p.name === name ? { ...p, startDate: format(date, 'yyyy-MM-dd') } : p));
+  };
+
+  const updateEndDate = (name: string, date: Date) => {
+    setServicePricing(prev => prev.map(p => p.name === name ? { ...p, endDate: format(date, 'yyyy-MM-dd') } : p));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -305,6 +315,17 @@ export function ProjectModal({ isOpen, onClose, onSave, onUpdate, clients, editI
                           className="bg-gray-50 border border-gray-200 rounded px-2 py-1 text-gray-900 text-[10px] focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                         />
                       </label>
+                      {pricing.billing === 'monthly' && (
+                        <label className="flex items-center gap-1 text-gray-500">
+                          <span>To:</span>
+                          <input
+                            type="date"
+                            value={pricing.endDate || ''}
+                            onChange={e => updateEndDate(s, new Date(e.target.value + 'T00:00:00'))}
+                            className="bg-gray-50 border border-gray-200 rounded px-2 py-1 text-gray-900 text-[10px] focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                          />
+                        </label>
+                      )}
                     </>
                   )}
                 </div>

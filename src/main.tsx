@@ -13,6 +13,14 @@ import Tasks from './pages/Tasks';
 import Projects from './pages/Projects';
 import ProjectDetail from './pages/ProjectDetail';
 import AppCalendar from './pages/Calendar';
+import ClientLogin from './pages/client/ClientLogin';
+import ClientDashboard from './pages/client/ClientDashboard';
+import ClientProjects from './pages/client/ClientProjects';
+import ClientPayments from './pages/client/ClientPayments';
+import ClientDocuments from './pages/client/ClientDocuments';
+import ClientAbout from './pages/client/ClientAbout';
+import { ClientGuard } from './components/ClientGuard';
+import ClientLayout from './components/ClientLayout';
 import './index.css';
 
 createRoot(document.getElementById('root')!).render(
@@ -21,6 +29,7 @@ createRoot(document.getElementById('root')!).render(
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/client/login" element={<ClientLogin />} />
           <Route element={<AuthGuard />}>
             <Route element={<DataProvider> <Layout /> </DataProvider>}>
               <Route path="/" element={<Dashboard />} />
@@ -31,6 +40,16 @@ createRoot(document.getElementById('root')!).render(
               <Route path="/tasks" element={<Tasks />} />
               <Route path="/project/:id" element={<ProjectDetail />} />
               <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+          </Route>
+          <Route element={<ClientGuard />}>
+            <Route element={<ClientLayout />}>
+              <Route path="/client/dashboard" element={<ClientDashboard />} />
+              <Route path="/client/projects" element={<ClientProjects />} />
+              <Route path="/client/payments" element={<ClientPayments />} />
+              <Route path="/client/documents" element={<ClientDocuments />} />
+              <Route path="/client/about" element={<ClientAbout />} />
+              <Route path="/client/*" element={<Navigate to="/client/dashboard" replace />} />
             </Route>
           </Route>
         </Routes>

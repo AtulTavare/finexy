@@ -3,9 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { useData } from '../store/DataContext';
 import { Card, Button, Badge, ConfirmDialog } from '../components/ui';
 import { Project } from '../types';
-import { format } from 'date-fns';
+import { format, differenceInMonths } from 'date-fns';
 import { formatCurrency } from '../lib/utils';
 import { ProjectModal } from '../components/modals';
+
+function serviceTotalValue(svc: { price: number; billing: string; startDate: string; endDate?: string }): number {
+  if (svc.billing === 'one-time') return svc.price;
+  if (!svc.endDate) return svc.price;
+  const months = differenceInMonths(new Date(svc.endDate), new Date(svc.startDate)) + 1;
+  return svc.price * Math.max(1, months);
+}
 
 export default function Projects() {
   const navigate = useNavigate();
@@ -57,14 +64,16 @@ export default function Projects() {
                     {p.servicePricing.length > 0 && (
                       <div className="space-y-2 pt-2">
                         {p.servicePricing.map(svc => {
+                          const sTotal = serviceTotalValue(svc);
                           const paid = businessPayments.filter(bp => bp.projectId === p.id && bp.serviceName === svc.name).reduce((sum, bp) => sum + bp.amount, 0);
-                          const pct = svc.price > 0 ? Math.min(paid / svc.price, 1) : 0;
+                          const pct = sTotal > 0 ? Math.min(paid / sTotal, 1) : 0;
                           const started = new Date(svc.startDate) <= new Date();
                           return (
                             <div key={svc.name} className="border-l-2 border-gray-200 pl-2">
                               <div className="flex justify-between text-[10px]">
                                 <span className="font-medium text-gray-900">{svc.name}</span>
                                 <span className="text-gray-500">{svc.billing === 'one-time' ? formatCurrency(svc.price) : `${formatCurrency(svc.price)}/mo`}</span>
+                                {svc.billing === 'monthly' && svc.endDate && <span className="text-[9px] text-gray-400 ml-1">({formatCurrency(sTotal)} total)</span>}
                               </div>
                               {!started ? (
                                 <div className="text-[9px] text-orange-500 font-medium">Starts {format(new Date(svc.startDate), 'MMM d')}</div>

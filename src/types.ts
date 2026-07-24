@@ -109,6 +109,18 @@ export interface ServicePricing {
   price: number;
   billing: 'one-time' | 'monthly';
   startDate: string;
+  endDate?: string;
+}
+
+export interface Document {
+  id: string;
+  clientId: string;
+  name: string;
+  type: string;
+  fileUrl: string;
+  uploadedBy: 'admin' | 'client';
+  createdAt: string;
+  userId?: string;
 }
 
 export interface Project {
@@ -147,4 +159,5 @@ export interface PulseData {
   tasks: Task[];
   projects: Project[];
   meetings: Meeting[];
+  documents: Document[];
 }

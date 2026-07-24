@@ -4,8 +4,15 @@ import { useData } from '../store/DataContext';
 import { Card, Button, Badge, ConfirmDialog } from '../components/ui';
 import { ProjectModal, PaymentModal } from '../components/modals';
 import { formatCurrency } from '../lib/utils';
-import { format } from 'date-fns';
+import { format, differenceInMonths } from 'date-fns';
 import { ArrowLeft, Trash2, Plus } from 'lucide-react';
+
+function serviceTotalValue(svc: { price: number; billing: string; startDate: string; endDate?: string }): number {
+  if (svc.billing === 'one-time') return svc.price;
+  if (!svc.endDate) return svc.price;
+  const months = differenceInMonths(new Date(svc.endDate), new Date(svc.startDate)) + 1;
+  return svc.price * Math.max(1, months);
+}
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -33,7 +40,7 @@ export default function ProjectDetail() {
     );
   }
 
-  const totalBudget = project.servicePricing.reduce((sum, s) => sum + s.price, 0);
+  const totalBudget = project.servicePricing.reduce((sum, s) => sum + serviceTotalValue(s), 0);
   const totalPaid = businessPayments.filter(p => p.projectId === project.id).reduce((s, p) => s + p.amount, 0);
   const remaining = Math.max(0, totalBudget - totalPaid);
   const pct = totalBudget > 0 ? Math.min(totalPaid / totalBudget, 1) : 0;
@@ -102,8 +109,9 @@ export default function ProjectDetail() {
         <h2 className="text-sm font-semibold text-gray-900 mb-4">Services</h2>
         <div className="space-y-4">
           {project.servicePricing.map(svc => {
+            const sTotal = serviceTotalValue(svc);
             const paid = businessPayments.filter(p => p.projectId === project.id && p.serviceName === svc.name).reduce((sum, p) => sum + p.amount, 0);
-            const sPct = svc.price > 0 ? Math.min(paid / svc.price, 1) : 0;
+            const sPct = sTotal > 0 ? Math.min(paid / sTotal, 1) : 0;
             const started = new Date(svc.startDate) <= new Date();
             return (
               <div key={svc.name} className="border border-gray-100 rounded-xl p-3">
@@ -115,6 +123,7 @@ export default function ProjectDetail() {
                   </div>
                   <span className="text-sm font-semibold text-gray-900">
                     {svc.billing === 'one-time' ? formatCurrency(svc.price) : `${formatCurrency(svc.price)}/mo`}
+                    {svc.billing === 'monthly' && svc.endDate && <span className="text-[10px] text-gray-400 ml-1 font-normal">({formatCurrency(sTotal)} total)</span>}
                   </span>
                 </div>
                 {started && (

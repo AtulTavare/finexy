@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import {
   PulseData, PersonalIncome, PersonalExpense, PersonalDebt,
   Lead, Client, BusinessPayment, BusinessExpense,
-  Task, Project, Meeting,
+  Task, Project, Meeting, Document,
 } from '../types';
 import { generateId, toCamelCase, toSnakeCase } from '../lib/utils';
 import { supabase } from '../lib/supabase';
@@ -47,6 +47,8 @@ interface DataContextType extends PulseData {
   addMeeting: (item: Omit<Meeting, 'id' | 'createdAt'>) => void;
   updateMeeting: (id: string, updates: Partial<Meeting>) => void;
   deleteMeeting: (id: string) => void;
+  addDocument: (item: Omit<Document, 'id' | 'createdAt'>) => void;
+  deleteDocument: (id: string) => void;
 }
 
 const emptyData: PulseData = {
@@ -60,6 +62,7 @@ const emptyData: PulseData = {
   tasks: [],
   projects: [],
   meetings: [],
+  documents: [],
 };
 
 const DataContext = createContext<DataContextType | null>(null);
@@ -67,7 +70,7 @@ const DataContext = createContext<DataContextType | null>(null);
 type TableName =
   | 'personal_income' | 'personal_expenses' | 'personal_debts'
   | 'leads' | 'clients' | 'business_payments'
-  | 'business_expenses' | 'tasks' | 'projects' | 'meetings';
+  | 'business_expenses' | 'tasks' | 'projects' | 'meetings' | 'client_documents';
 
 const TABLE_MAP: Record<keyof PulseData, TableName> = {
   personalIncome: 'personal_income',
@@ -80,6 +83,7 @@ const TABLE_MAP: Record<keyof PulseData, TableName> = {
   tasks: 'tasks',
   projects: 'projects',
   meetings: 'meetings',
+  documents: 'client_documents',
 };
 
 let toastId = 0;
@@ -521,6 +525,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (!ok && prev) setArray('meetings', (prevArr) => [prev, ...prevArr]);
   };
 
+  const addDocument = async (item: Omit<Document, 'id' | 'createdAt'>) => {
+    const newItem: Document = { ...item, id: generateId(), createdAt: new Date().toISOString() };
+    setArray('documents', (prev) => [newItem, ...prev]);
+    const ok = await dbInsert('client_documents', newItem);
+    if (!ok) setArray('documents', (prev) => prev.filter((d) => d.id !== newItem.id));
+  };
+
+  const deleteDocument = async (id: string) => {
+    const prev = data.documents.find(d => d.id === id);
+    setArray('documents', (prevArr) => prevArr.filter((d) => d.id !== id));
+    const ok = await dbDelete('client_documents', id);
+    if (!ok && prev) setArray('documents', (prevArr) => [prev, ...prevArr]);
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -537,6 +555,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         addTask, updateTask, deleteTask,
         addProject, updateProject, deleteProject,
         addMeeting, updateMeeting, deleteMeeting,
+        addDocument, deleteDocument,
       }}
     >
       {children}

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useData } from '../store/DataContext';
 import { Card, Button, Badge } from '../components/ui';
 import { formatCurrency } from '../lib/utils';
-import { format, subMonths, isAfter, startOfMonth, isBefore, addDays, startOfToday, startOfWeek, subWeeks, subDays, startOfDay } from 'date-fns';
+import { format, subMonths, isAfter, startOfMonth, isBefore, addDays, startOfToday, startOfWeek, subWeeks, subDays, startOfDay, differenceInMonths } from 'date-fns';
 import { BarChart, Bar, PieChart, Pie, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 import { PlusCircle, ArrowUpRight, ArrowDownRight, Briefcase } from 'lucide-react';
 
@@ -15,6 +15,21 @@ export default function Dashboard() {
   // --- Calculations ---
   const today = startOfToday();
 
+  function serviceTotalValue(svc: { price: number; billing: string; startDate: string; endDate?: string }): number {
+    if (svc.billing === 'one-time') return svc.price;
+    if (!svc.endDate) return svc.price;
+    const months = differenceInMonths(new Date(svc.endDate), new Date(svc.startDate)) + 1;
+    return svc.price * Math.max(1, months);
+  }
+
+  function serviceActiveMonthly(svc: { billing: string; startDate: string; endDate?: string }): boolean {
+    if (svc.billing !== 'monthly') return false;
+    const start = new Date(svc.startDate);
+    if (start > today) return false;
+    if (svc.endDate && new Date(svc.endDate) < today) return false;
+    return true;
+  }
+
   const filterStart = useMemo(() => {
     if (timeFilter === 'Daily') return startOfDay(today);
     if (timeFilter === 'Weekly') return startOfWeek(today);
@@ -23,7 +38,7 @@ export default function Dashboard() {
 
   const periodReceivables = data.projects.reduce((sum, p) => {
     const monthlyThisMonth = (p.servicePricing || [])
-      .filter(s => s.billing === 'monthly' && new Date(s.startDate) <= today)
+      .filter(s => serviceActiveMonthly(s))
       .reduce((s, svc) => s + svc.price, 0);
     const oneTimeRemaining = (p.servicePricing || [])
       .filter(s => s.billing === 'one-time')
@@ -158,7 +173,7 @@ export default function Dashboard() {
           <div className="space-y-4">
             {data.projects.filter(p => p.servicePricing?.length > 0).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(project => {
               const client = data.clients.find(c => c.id === project.clientId);
-              const totalBudget = project.servicePricing.reduce((sum, s) => sum + s.price, 0);
+              const totalBudget = project.servicePricing.reduce((sum, s) => sum + serviceTotalValue(s), 0);
               const paid = data.businessPayments.filter(p => p.projectId === project.id).reduce((s, p) => s + p.amount, 0);
               const remaining = Math.max(0, totalBudget - paid);
               const pct = totalBudget > 0 ? Math.min(paid / totalBudget, 1) : 0;
@@ -188,8 +203,9 @@ export default function Dashboard() {
                   {project.servicePricing.length > 0 && (
                     <div className="space-y-2 pt-1 border-t border-gray-50">
                       {project.servicePricing.map(s => {
+                        const sTotal = serviceTotalValue(s);
                         const sPaid = data.businessPayments.filter(p => p.projectId === project.id && p.serviceName === s.name).reduce((sum, p) => sum + p.amount, 0);
-                        const sPct = s.price > 0 ? Math.min(sPaid / s.price, 1) : 0;
+                        const sPct = sTotal > 0 ? Math.min(sPaid / sTotal, 1) : 0;
                         return (
                           <div key={s.name}>
                             <div className="flex justify-between items-center mb-1">
@@ -199,7 +215,7 @@ export default function Dashboard() {
                                 <Badge variant="default" className="!text-[9px] !px-1.5 shrink-0">{s.billing}</Badge>
                               </div>
                               <span className="text-[11px] tabular text-gray-500 shrink-0 whitespace-nowrap">
-                                {formatCurrency(sPaid)} of {formatCurrency(s.price)}
+                                {formatCurrency(sPaid)} of {formatCurrency(sTotal)}
                               </span>
                             </div>
                             <div className="w-full bg-orange-300/30 rounded-full h-1.5 overflow-hidden">
