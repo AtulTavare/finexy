@@ -31,6 +31,7 @@ export default function ClientLogin() {
           navigate('/client/dashboard', { replace: true });
         } else {
           supabase.auth.signOut();
+          setError('This account does not have client access. Please use the admin login.');
         }
       });
     }
@@ -50,13 +51,6 @@ export default function ClientLogin() {
     const { error: signInError } = await signIn(email, password);
     if (signInError) {
       setError(signInError);
-      setLoading(false);
-      return;
-    }
-    const { data } = await supabase.from('client_users').select('id').eq('user_id', user?.id).single();
-    if (!data) {
-      await supabase.auth.signOut();
-      setError('This account does not have client access. Please use the admin login.');
       setLoading(false);
     }
   };

@@ -5,7 +5,7 @@ import { Card, Button, Input, Select, Label, Modal, Badge, DatePicker, ConfirmDi
 import { formatCurrency } from '../lib/utils';
 import { Brand, Lead, Client, BusinessPayment, BusinessExpense, Project } from '../types';
 import { format } from 'date-fns';
-import { Trash2, UserPlus } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../store/AuthContext';
 import { PaymentModal } from '../components/modals';
@@ -28,8 +28,6 @@ export default function Business() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showClientModal, setShowClientModal] = useState(false);
-  const [showCreateLoginModal, setShowCreateLoginModal] = useState(false);
-  const [createLoginClient, setCreateLoginClient] = useState<Client | null>(null);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [editingPayment, setEditingPayment] = useState<BusinessPayment | null>(null);
   const [editingExpense, setEditingExpense] = useState<BusinessExpense | null>(null);
@@ -121,7 +119,7 @@ export default function Business() {
 
       <div>
         {activeTab === 'pipeline' && <PipelineView leads={filteredLeads} updateLead={updateLead} deleteLead={deleteLead} onEdit={(lead) => { setEditingLead(lead); setShowLeadModal(true); }} />}
-        {activeTab === 'clients' && <ClientsView clients={filteredClients} projects={projects} onEdit={(c) => { setEditingClient(c); setShowClientModal(true); }} onCreateLogin={(c) => { setCreateLoginClient(c); setShowCreateLoginModal(true); }} />}
+        {activeTab === 'clients' && <ClientsView clients={filteredClients} projects={projects} onEdit={(c) => { setEditingClient(c); setShowClientModal(true); }} />}
         {activeTab === 'payments' && <PaymentsView payments={filteredPayments} clients={clients} projects={projects} deletePayment={deleteBusinessPayment} onEdit={(p) => { setEditingPayment(p); setShowPaymentModal(true); }} />}
         {activeTab === 'expenses' && <ExpensesView expenses={filteredExpenses} deleteExpense={deleteBusinessExpense} onEdit={(e) => { setEditingExpense(e); setShowExpenseModal(true); }} />}
       </div>
@@ -130,12 +128,6 @@ export default function Business() {
       <PaymentModal isOpen={showPaymentModal} onClose={() => { setShowPaymentModal(false); setEditingPayment(null); }} onSaveIncoming={addBusinessPayment} onUpdateIncoming={updateBusinessPayment} onSaveOutgoing={addBusinessExpense} onUpdateOutgoing={updateBusinessExpense} clients={filteredClients} payments={businessPayments} projects={projects} editItem={editingPayment} />
       <BusinessExpenseModal isOpen={showExpenseModal} onClose={() => { setShowExpenseModal(false); setEditingExpense(null); }} onSave={addBusinessExpense} onUpdate={updateBusinessExpense} editItem={editingExpense} />
       <ClientModal isOpen={showClientModal} onClose={() => { setShowClientModal(false); setEditingClient(null); }} onSave={addClient} onUpdate={updateClient} editItem={editingClient} />
-      <CreateLoginModal
-        isOpen={showCreateLoginModal}
-        onClose={() => { setShowCreateLoginModal(false); setCreateLoginClient(null); }}
-        client={createLoginClient}
-        user={user}
-      />
     </div>
   );
 }
@@ -266,10 +258,9 @@ interface ClientsViewProps {
   clients: Client[];
   projects: Project[];
   onEdit: (client: Client) => void;
-  onCreateLogin: (client: Client) => void;
 }
 
-function ClientsView({ clients, projects, onEdit, onCreateLogin }: ClientsViewProps) {
+function ClientsView({ clients, projects, onEdit }: ClientsViewProps) {
   if (clients.length === 0) return <div className="text-gray-900 italic">No clients yet.</div>;
   return (
     <Card className="p-0 bg-white">
@@ -280,7 +271,6 @@ function ClientsView({ clients, projects, onEdit, onCreateLogin }: ClientsViewPr
             <th className="pb-2 p-4 md:p-6 font-semibold hidden md:table-cell">Projects</th>
             <th className="pb-2 p-4 md:p-6 font-semibold hidden md:table-cell">Contact</th>
             <th className="pb-2 p-4 md:p-6 font-semibold">Status</th>
-            <th className="pb-2 p-4 md:p-6 font-semibold text-right">Login</th>
           </tr>
         </thead>
         <tbody>
@@ -307,17 +297,6 @@ function ClientsView({ clients, projects, onEdit, onCreateLogin }: ClientsViewPr
                 <td className="p-4 md:p-6 hidden md:table-cell text-gray-900">{c.contact}</td>
                 <td className="p-4 md:p-6">
                   <Badge variant={c.status === 'Active' ? 'success' : c.status === 'Paused' ? 'warning' : 'danger'}>{c.status}</Badge>
-                </td>
-                <td className="p-4 md:p-6 text-right">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onCreateLogin(c); }}
-                    className="text-xs font-medium text-orange-600 hover:text-orange-700 hover:bg-orange-50 px-2 py-1 rounded-full transition-all cursor-pointer flex items-center gap-1 ml-auto"
-                    title={c.mail ? 'Create client login' : 'Add an email to this client first'}
-                    disabled={!c.mail}
-                  >
-                    <UserPlus size={12} />
-                    <span className="hidden sm:inline">Login</span>
-                  </button>
                 </td>
               </tr>
             );
@@ -562,73 +541,9 @@ function BusinessExpenseModal({ isOpen, onClose, onSave, onUpdate, editItem }: B
 interface ClientModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (item: Omit<Client, 'id' | 'createdAt'>) => void;
+  onSave: (item: Omit<Client, 'id' | 'createdAt'>) => Promise<string | null>;
   onUpdate?: (id: string, updates: Partial<Client>) => void;
   editItem?: Client | null;
-}
-
-interface CreateLoginModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  client: Client | null;
-  user: any;
-}
-
-function CreateLoginModal({ isOpen, onClose, client, user }: CreateLoginModalProps) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-
-  useEffect(() => {
-    if (client) {
-      setEmail(client.mail || '');
-      setPassword('');
-      setConfirmPassword('');
-      setError('');
-      setSuccess('');
-    }
-  }, [client, isOpen]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-
-    if (!email.trim()) { setError('Email is required'); return; }
-    if (password.length < 6) { setError('Password must be at least 6 characters'); return; }
-    if (password !== confirmPassword) { setError('Passwords do not match'); return; }
-
-    setLoading(true);
-    try {
-      const { data, error: fnError } = await supabase.functions.invoke('create-client-user', {
-        body: { email: email.trim(), password, name: client?.name || '', clientId: client?.id || '' },
-      });
-      if (fnError) throw new Error(fnError.message);
-      setSuccess(`Login created successfully for ${email}. They can sign in at /client/login.`);
-    } catch (err: any) {
-      setError(err.message || 'Failed to create login');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Create Login — ${client?.name || ''}`}>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div><Label>Email</Label><Input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="client@example.com" /></div>
-        <div><Label>Password</Label><Input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="Min 6 characters" /></div>
-        <div><Label>Confirm Password</Label><Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} required placeholder="Re-enter password" /></div>
-        {error && <div className="text-sm text-red-600 bg-red-50 px-4 py-3 rounded-xl font-medium">{error}</div>}
-        {success && <div className="text-sm text-emerald-600 bg-emerald-50 px-4 py-3 rounded-xl font-medium">{success}</div>}
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? 'Creating...' : 'Create Login'}
-        </Button>
-      </form>
-    </Modal>
-  );
 }
 
 function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModalProps) {
@@ -639,6 +554,11 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
   const [address, setAddress] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [status, setStatus] = useState<'Active' | 'Paused' | 'Churned'>('Active');
+  const [createLogin, setCreateLogin] = useState(false);
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginConfirm, setLoginConfirm] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [loginError, setLoginError] = useState('');
 
   useEffect(() => {
     if (editItem) {
@@ -646,18 +566,50 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
     } else {
       setName(''); setBrand('Infinity Innovations'); setContact(''); setMail(''); setAddress(''); setBusinessName(''); setStatus('Active');
     }
+    setCreateLogin(false); setLoginPassword(''); setLoginConfirm(''); setSaving(false); setLoginError('');
   }, [editItem, isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name) return;
+
     if (editItem && onUpdate) {
       onUpdate(editItem.id, { name, brand, contact, mail, address, businessName, status });
-    } else {
-      onSave({ name, brand, contact, mail, address, businessName, status });
+      onClose();
+      return;
     }
+
+    setSaving(true);
+    setLoginError('');
+
+    const clientId = await onSave({ name, brand, contact, mail, address, businessName, status });
+
+    if (createLogin && clientId && mail && loginPassword) {
+      if (loginPassword.length < 6) {
+        setLoginError('Password must be at least 6 characters');
+        setSaving(false);
+        return;
+      }
+      if (loginPassword !== loginConfirm) {
+        setLoginError('Passwords do not match');
+        setSaving(false);
+        return;
+      }
+      const { error: fnError } = await supabase.functions.invoke('create-client-user', {
+        body: { email: mail, password: loginPassword, name, clientId },
+      });
+      if (fnError) {
+        setLoginError(`Client saved but login failed: ${fnError.message}. Deploy the edge function and try again.`);
+        setSaving(false);
+        return;
+      }
+    }
+
+    setSaving(false);
     onClose();
   };
+
+  const isNew = !editItem;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={editItem ? 'Edit Client' : 'Add Client'}>
@@ -683,7 +635,29 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
         <div><Label>Contact Number</Label><Input value={contact} onChange={e => setContact(e.target.value)} /></div>
         <div><Label>Business Name</Label><Input value={businessName} onChange={e => setBusinessName(e.target.value)} /></div>
         <div><Label>Address</Label><Input value={address} onChange={e => setAddress(e.target.value)} /></div>
-        <Button type="submit" className="w-full mt-4">{editItem ? 'Update Client' : 'Save Client'}</Button>
+        {isNew && (
+          <div className="border-t border-gray-100 pt-4 space-y-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={createLogin}
+                onChange={e => setCreateLogin(e.target.checked)}
+                className="rounded border-gray-200 bg-white text-orange-500 focus:ring-orange-400"
+              />
+              <span className="text-xs font-medium text-gray-700">Create client login</span>
+            </label>
+            {createLogin && (
+              <>
+                <div><Label>Password</Label><Input type="password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} required placeholder="Min 6 characters" /></div>
+                <div><Label>Confirm Password</Label><Input type="password" value={loginConfirm} onChange={e => setLoginConfirm(e.target.value)} required placeholder="Re-enter password" /></div>
+              </>
+            )}
+          </div>
+        )}
+        {loginError && <div className="text-sm text-red-600 bg-red-50 px-4 py-3 rounded-xl font-medium">{loginError}</div>}
+        <Button type="submit" className="w-full mt-4" disabled={saving}>
+          {saving ? 'Saving...' : editItem ? 'Update Client' : 'Save Client'}
+        </Button>
       </form>
     </Modal>
   );

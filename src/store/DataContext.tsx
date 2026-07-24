@@ -29,7 +29,7 @@ interface DataContextType extends PulseData {
   addLead: (item: Omit<Lead, 'id' | 'createdAt'>) => void;
   updateLead: (id: string, updates: Partial<Lead>) => void;
   deleteLead: (id: string) => void;
-  addClient: (item: Omit<Client, 'id' | 'createdAt'>) => void;
+  addClient: (item: Omit<Client, 'id' | 'createdAt'>) => Promise<string | null>;
   updateClient: (id: string, updates: Partial<Client>) => void;
   deleteClient: (id: string) => void;
   addBusinessPayment: (item: Omit<BusinessPayment, 'id' | 'createdAt'>) => void;
@@ -363,11 +363,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (!ok && prev) setArray('leads', (prevArr) => [prev, ...prevArr]);
   };
 
-  const addClient = async (item: Omit<Client, 'id' | 'createdAt'>) => {
+  const addClient = async (item: Omit<Client, 'id' | 'createdAt'>): Promise<string | null> => {
     const newItem: Client = { ...item, id: generateId(), createdAt: new Date().toISOString() };
     setArray('clients', (prev) => [newItem, ...prev]);
     const ok = await dbInsert('clients', newItem);
-    if (!ok) setArray('clients', (prev) => prev.filter((c) => c.id !== newItem.id));
+    if (!ok) {
+      setArray('clients', (prev) => prev.filter((c) => c.id !== newItem.id));
+      return null;
+    }
+    return newItem.id;
   };
 
   const updateClient = async (id: string, updates: Partial<Client>) => {
