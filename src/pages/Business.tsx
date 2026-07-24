@@ -6,7 +6,7 @@ import { formatCurrency } from '../lib/utils';
 import { Brand, Lead, Client, BusinessPayment, BusinessExpense, Project } from '../types';
 import { format } from 'date-fns';
 import { Trash2 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase';
 import { useAuth } from '../store/AuthContext';
 import { PaymentModal } from '../components/modals';
 
@@ -580,13 +580,21 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
         setLoginError('');
         if (loginPassword.length < 6) { setLoginError('Password must be at least 6 characters'); setSaving(false); return; }
         if (loginPassword !== loginConfirm) { setLoginError('Passwords do not match'); setSaving(false); return; }
-        const { data: { session } } = await supabase.auth.getSession();
-        const { error: fnError } = await supabase.auth.signUp({
-          email: mail, password: loginPassword,
-          options: { data: { role: 'client', client_id: editItem.id } },
+        const res = await fetch(`${supabaseUrl}/auth/v1/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: supabaseAnonKey },
+          body: JSON.stringify({ email: mail, password: loginPassword, data: { role: 'client', client_id: editItem.id } }),
         });
-        if (session) await supabase.auth.setSession(session);
-        if (fnError) { setLoginError(`Client saved but login failed: ${fnError.message}.`); setSaving(false); return; }
+        const signUpData = await res.json();
+        if (!signUpData.id) {
+          setLoginError(`Login failed: ${JSON.stringify(signUpData)}`);
+          setSaving(false);
+          return;
+        }
+        const { error: linkErr } = await supabase.rpc('link_client_user', {
+          user_id: signUpData.id, client_id: editItem.id, user_name: name, email: mail,
+        });
+        if (linkErr) { setLoginError(`Link failed: ${linkErr.message}`); setSaving(false); return; }
       }
       onClose();
       return;
@@ -608,14 +616,22 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
         setSaving(false);
         return;
       }
-      const { data: { session } } = await supabase.auth.getSession();
-      const { error: fnError } = await supabase.auth.signUp({
-        email: mail, password: loginPassword,
-        options: { data: { role: 'client', client_id: clientId } },
+      const res = await fetch(`${supabaseUrl}/auth/v1/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: supabaseAnonKey },
+        body: JSON.stringify({ email: mail, password: loginPassword, data: { role: 'client', client_id: clientId } }),
       });
-      if (session) await supabase.auth.setSession(session);
-      if (fnError) {
-        setLoginError(`Client saved but login failed: ${fnError.message}.`);
+      const signUpData = await res.json();
+      if (!signUpData.id) {
+        setLoginError(`Client saved but login failed: ${JSON.stringify(signUpData)}`);
+        setSaving(false);
+        return;
+      }
+      const { error: linkErr } = await supabase.rpc('link_client_user', {
+        user_id: signUpData.id, client_id: clientId, user_name: name, email: mail,
+      });
+      if (linkErr) {
+        setLoginError(`Client saved but link failed: ${linkErr.message}`);
         setSaving(false);
         return;
       }
