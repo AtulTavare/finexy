@@ -167,7 +167,7 @@ export default function Dashboard() {
         {data.projects.filter(p => p.servicePricing?.length > 0).length === 0 ? (
           <p className="text-xs text-gray-400 italic">Set service pricing when adding a project to track receivables.</p>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
             {data.projects.filter(p => p.servicePricing?.length > 0).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(project => {
               const client = data.clients.find(c => c.id === project.clientId);
               const totalBudget = project.servicePricing.reduce((sum, s) => sum + serviceTotalValue(s), 0);
@@ -175,55 +175,26 @@ export default function Dashboard() {
               const remaining = Math.max(0, totalBudget - paid);
               const pct = totalBudget > 0 ? Math.min(paid / totalBudget, 1) : 0;
               return (
-                <div key={project.id} className="border border-gray-100 rounded-xl p-4 space-y-3">
+                <Card key={project.id} className="p-4 space-y-3">
                   <div className="flex justify-between items-start gap-2">
                     <div className="flex items-center gap-2 flex-wrap min-w-0">
                       <span className="font-semibold text-sm text-gray-900 truncate">{project.title}</span>
                       {client && <span className="text-xs text-gray-400 truncate">{client.name}</span>}
-                      <Badge variant={project.status === 'Completed' ? 'success' : project.status === 'In Progress' ? 'warning' : 'secondary'} className="shrink-0 !text-[9px] !px-1.5">
-                        {project.status}
-                      </Badge>
                     </div>
-                    <span className="text-[11px] tabular text-gray-500 shrink-0 whitespace-nowrap">
-                      {formatCurrency(paid)} of {formatCurrency(totalBudget)}
-                    </span>
+                    <Badge variant={project.status === 'Completed' ? 'success' : project.status === 'In Progress' ? 'warning' : 'secondary'} className="shrink-0 !text-[9px] !px-1.5">
+                      {project.status}
+                    </Badge>
                   </div>
                   <div className="w-full bg-orange-300/50 rounded-full h-2 overflow-hidden flex">
                     <div className="bg-emerald-500 h-2 transition-all" style={{ width: `${pct * 100}%` }} />
                   </div>
                   <div className="flex justify-between text-[11px]">
                     <span className={remaining > 0 ? 'text-orange-600 font-semibold' : 'text-emerald-600 font-semibold'}>
-                      {remaining > 0 ? `${formatCurrency(remaining)} remaining` : 'Fully paid'}
+                      {formatCurrency(remaining)} {remaining > 0 ? 'remaining' : 'paid'}
                     </span>
-                    <span className="text-gray-400">{Math.round(pct * 100)}%</span>
+                    <span className="text-gray-400">{formatCurrency(paid)} / {formatCurrency(totalBudget)}</span>
                   </div>
-                  {project.servicePricing.length > 0 && (
-                    <div className="space-y-2 pt-1 border-t border-gray-50">
-                      {project.servicePricing.map(s => {
-                        const sTotal = serviceTotalValue(s);
-                        const sPaid = data.businessPayments.filter(p => p.projectId === project.id && p.serviceName === s.name).reduce((sum, p) => sum + p.amount, 0);
-                        const sPct = sTotal > 0 ? Math.min(sPaid / sTotal, 1) : 0;
-                        return (
-                          <div key={s.name}>
-                            <div className="flex justify-between items-center mb-1">
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <div className="w-1.5 h-1.5 rounded-full bg-orange-400 shrink-0" />
-                                <span className="text-xs text-gray-700 truncate">{s.name}</span>
-                                <Badge variant="default" className="!text-[9px] !px-1.5 shrink-0">{s.billing}</Badge>
-                              </div>
-                              <span className="text-[11px] tabular text-gray-500 shrink-0 whitespace-nowrap">
-                                {formatCurrency(sPaid)} of {formatCurrency(sTotal)}
-                              </span>
-                            </div>
-                            <div className="w-full bg-orange-300/30 rounded-full h-1.5 overflow-hidden">
-                              <div className="bg-emerald-400 h-1.5 transition-all" style={{ width: `${sPct * 100}%` }} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                </Card>
               );
             })}
           </div>
