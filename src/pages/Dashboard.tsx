@@ -41,17 +41,14 @@ export default function Dashboard() {
       .filter(s => serviceActiveMonthly(s))
       .reduce((s, svc) => s + svc.price, 0);
     const oneTimeRemaining = (p.servicePricing || [])
-      .filter(s => s.billing === 'one-time')
+      .filter(s => s.billing === 'one-time' && new Date(s.startDate) <= today)
       .reduce((s, svc) => {
         const paid = data.businessPayments
           .filter(bp => bp.projectId === p.id && bp.serviceName === svc.name)
           .reduce((sum, bp) => sum + bp.amount, 0);
         return s + Math.max(0, svc.price - paid);
       }, 0);
-    const periodPaid = data.businessPayments
-      .filter(bp => bp.projectId === p.id && isAfter(new Date(bp.date), filterStart))
-      .reduce((s, bp) => s + bp.amount, 0);
-    return sum + Math.max(0, monthlyThisMonth + oneTimeRemaining - periodPaid);
+    return sum + Math.max(0, monthlyThisMonth + oneTimeRemaining);
   }, 0);
   const totalBusinessIncome = data.businessPayments.reduce((s, p) => s + p.amount, 0);
   const totalPersonalExpenses = data.personalExpenses.reduce((s, e) => s + e.amount, 0);
