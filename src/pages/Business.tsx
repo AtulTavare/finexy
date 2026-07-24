@@ -581,7 +581,7 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
         if (loginPassword.length < 6) { setLoginError('Password must be at least 6 characters'); setSaving(false); return; }
         if (loginPassword !== loginConfirm) { setLoginError('Passwords do not match'); setSaving(false); return; }
         const { error: fnError } = await supabase.rpc('create_client_user', {
-          email: mail, password: loginPassword, name, client_id: editItem.id,
+          email: mail, password: loginPassword, user_name: name, client_id: editItem.id,
         });
         if (fnError) { setLoginError(`Client saved but login failed: ${fnError.message}.`); setSaving(false); return; }
       }
@@ -606,7 +606,7 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
         return;
       }
       const { error: fnError } = await supabase.rpc('create_client_user', {
-        email: mail, password: loginPassword, name, client_id: clientId,
+        email: mail, password: loginPassword, user_name: name, client_id: clientId,
       });
       if (fnError) {
         setLoginError(`Client saved but login failed: ${fnError.message}.`);
