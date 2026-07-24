@@ -575,6 +575,16 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
 
     if (editItem && onUpdate) {
       onUpdate(editItem.id, { name, brand, contact, mail, address, businessName, status });
+      if (createLogin && mail && loginPassword) {
+        setSaving(true);
+        setLoginError('');
+        if (loginPassword.length < 6) { setLoginError('Password must be at least 6 characters'); setSaving(false); return; }
+        if (loginPassword !== loginConfirm) { setLoginError('Passwords do not match'); setSaving(false); return; }
+        const { error: fnError } = await supabase.functions.invoke('create-client-user', {
+          body: { email: mail, password: loginPassword, name, clientId: editItem.id },
+        });
+        if (fnError) { setLoginError(`Client saved but login failed: ${fnError.message}.`); setSaving(false); return; }
+      }
       onClose();
       return;
     }
@@ -609,8 +619,6 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
     onClose();
   };
 
-  const isNew = !editItem;
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={editItem ? 'Edit Client' : 'Add Client'}>
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -635,8 +643,7 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
         <div><Label>Contact Number</Label><Input value={contact} onChange={e => setContact(e.target.value)} /></div>
         <div><Label>Business Name</Label><Input value={businessName} onChange={e => setBusinessName(e.target.value)} /></div>
         <div><Label>Address</Label><Input value={address} onChange={e => setAddress(e.target.value)} /></div>
-        {isNew && (
-          <div className="border-t border-gray-100 pt-4 space-y-3">
+        <div className="border-t border-gray-100 pt-4 space-y-3">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -653,7 +660,6 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
               </>
             )}
           </div>
-        )}
         {loginError && <div className="text-sm text-red-600 bg-red-50 px-4 py-3 rounded-xl font-medium">{loginError}</div>}
         <Button type="submit" className="w-full mt-4" disabled={saving}>
           {saving ? 'Saving...' : editItem ? 'Update Client' : 'Save Client'}
