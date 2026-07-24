@@ -21,10 +21,22 @@ export default function Dashboard() {
     return startOfMonth(today);
   }, [timeFilter, today]);
 
-  const totalReceivables = data.projects.reduce((sum, p) => {
-    const totalServices = (p.servicePricing || []).reduce((s, svc) => s + svc.price, 0);
-    const paid = data.businessPayments.filter(bp => bp.projectId === p.id).reduce((s, bp) => s + bp.amount, 0);
-    return sum + Math.max(0, totalServices - paid);
+  const periodReceivables = data.projects.reduce((sum, p) => {
+    const monthlyThisMonth = (p.servicePricing || [])
+      .filter(s => s.billing === 'monthly' && new Date(s.startDate) <= today)
+      .reduce((s, svc) => s + svc.price, 0);
+    const oneTimeRemaining = (p.servicePricing || [])
+      .filter(s => s.billing === 'one-time')
+      .reduce((s, svc) => {
+        const paid = data.businessPayments
+          .filter(bp => bp.projectId === p.id && bp.serviceName === svc.name)
+          .reduce((sum, bp) => sum + bp.amount, 0);
+        return s + Math.max(0, svc.price - paid);
+      }, 0);
+    const periodPaid = data.businessPayments
+      .filter(bp => bp.projectId === p.id && isAfter(new Date(bp.date), filterStart))
+      .reduce((s, bp) => s + bp.amount, 0);
+    return sum + Math.max(0, monthlyThisMonth + oneTimeRemaining - periodPaid);
   }, 0);
   const totalBusinessIncome = data.businessPayments.reduce((s, p) => s + p.amount, 0);
   const totalPersonalExpenses = data.personalExpenses.reduce((s, e) => s + e.amount, 0);
@@ -70,14 +82,17 @@ export default function Dashboard() {
     });
   }, [timeFilter, today, data]);
 
-  // Biz Expenses Pie Chart
+  // Expenses by Category
   const expenseCategories = useMemo(() => {
     const cats: Record<string, number> = {};
     data.businessExpenses.forEach(e => {
       cats[e.category] = (cats[e.category] || 0) + e.amount;
     });
+    data.personalExpenses.forEach(e => {
+      cats[e.category] = (cats[e.category] || 0) + e.amount;
+    });
     return Object.entries(cats).map(([name, value]) => ({ name, value })).filter(c => c.value > 0).sort((a,b) => b.value - a.value);
-  }, [data.businessExpenses]);
+  }, [data.businessExpenses, data.personalExpenses]);
 
   const COLORS = ['#f97316', '#18181b', '#fb923c', '#3f3f46', '#fdba74', '#71717a'];
 
@@ -131,7 +146,7 @@ export default function Dashboard() {
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <MetricCard title="Business Income" value={totalBusinessIncome} />
         <MetricCard title={`${timeFilter} Net`} value={periodNet} isPositive={periodNet >= 0} />
-        <MetricCard title="Receivables" value={totalReceivables} />
+        <MetricCard title="Receivables" value={periodReceivables} />
         <MetricCard title="Net Debt" value={netDebt} isDebt />
       </section>
 
@@ -325,7 +340,7 @@ export default function Dashboard() {
 }
 
 function MetricCard({ title, value, isPositive, isDebt }: { title: string, value: number, isPositive?: boolean, isDebt?: boolean }) {
-  const color = isDebt ? (value > 0 ? 'text-red-500' : 'text-gray-900') : (isPositive === true ? 'text-emerald-500' : isPositive === false ? 'text-red-500' : 'text-gray-900');
+  const color = isDebt ? (value > 0 ? 'text-red-500' : 'text-emerald-500') : (isPositive === true ? 'text-emerald-500' : isPositive === false ? 'text-red-500' : 'text-gray-900');
   const bgColor = isPositive === true ? "bg-[#f97316] text-white" : "bg-white text-gray-900";
   const labelColor = isPositive === true ? "text-orange-100" : "text-gray-500";
   const valColor = isPositive === true ? "text-white" : color;
