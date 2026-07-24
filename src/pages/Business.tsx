@@ -587,7 +587,10 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
         });
         const signUpData = await res.json();
         if (!signUpData.id) {
-          setLoginError(`Login failed: ${JSON.stringify(signUpData)}`);
+          const msg = signUpData.code === '23505'
+            ? `Client "${mail}" already has a login. Use a different email or delete the existing auth user first.`
+            : `Login failed: ${signUpData.message || JSON.stringify(signUpData)}`;
+          setLoginError(msg);
           setSaving(false);
           return;
         }
@@ -623,7 +626,10 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
       });
       const signUpData = await res.json();
       if (!signUpData.id) {
-        setLoginError(`Client saved but login failed: ${JSON.stringify(signUpData)}`);
+        const msg = signUpData.code === '23505'
+          ? `Client "${mail}" already has a login. Use a different email or delete the existing auth user first.`
+          : `Client saved but login failed: ${signUpData.message || JSON.stringify(signUpData)}`;
+        setLoginError(msg);
         setSaving(false);
         return;
       }
