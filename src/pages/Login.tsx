@@ -63,8 +63,8 @@ export default function Login() {
         <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-transparent" />
         <div className="absolute bottom-12 left-12 text-white">
           <div className="flex items-center space-x-3 mb-4">
-            <img src="/logo.png" alt="ShubhStack" className="w-12 h-12 rounded-xl" />
-            <span className="text-2xl font-bold">ShubhStack</span>
+            <img src="/logo.png" alt="Infinity" className="w-12 h-12 rounded-xl" />
+            <span className="text-2xl font-bold">Infinity</span>
           </div>
           <p className="text-lg text-white/80 max-w-md">
             Your command center for business and personal finance.
@@ -84,8 +84,8 @@ export default function Login() {
       <div className="flex-1 flex items-center justify-center p-4 md:p-8 bg-white">
         <div className="w-full max-w-sm">
           <div className="md:hidden flex items-center space-x-3 mb-10">
-            <img src="/logo.png" alt="ShubhStack" className="w-10 h-10 rounded-xl" />
-            <span className="text-xl font-bold">ShubhStack</span>
+            <img src="/logo.png" alt="Infinity" className="w-10 h-10 rounded-xl" />
+            <span className="text-xl font-bold">Infinity</span>
           </div>
 
           <h1 className="text-3xl font-bold tracking-tight text-gray-900 mb-2">Welcome back</h1>

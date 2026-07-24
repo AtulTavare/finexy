@@ -29,7 +29,7 @@ export default function ClientLayout() {
       <div className="flex flex-1 rounded-none sm:rounded-[32px] bg-[#f9fafc] border border-white shadow-sm overflow-hidden relative flex-col">
         <header className="flex items-center justify-between p-4 md:px-8 shrink-0 bg-white border-b border-gray-100">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="ShubhStack" className="w-8 h-8 rounded-lg" />
+            <img src="/logo.png" alt="Infinity" className="w-8 h-8 rounded-lg" />
             <span className="font-bold text-sm hidden sm:inline">Client Portal</span>
             <div className="hidden md:flex ml-6 space-x-1">
               {NAV_ITEMS.map((item) => {
