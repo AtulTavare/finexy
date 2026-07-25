@@ -5,6 +5,7 @@ import {
   Calendar as CalendarIcon, FolderKanban, Search, Bell, HelpCircle, LogOut,
 } from 'lucide-react';
 import { useAuth } from '../store/AuthContext';
+import { ConfirmDialog } from './ui';
 
 const NAV_ITEMS = [
   { path: '/admin-730If1Q5/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -20,6 +21,7 @@ export function Layout() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const [fabOpen, setFabOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const trigger = (event: string, path: string) => {
     if (location.pathname !== path) {
@@ -31,7 +33,9 @@ export function Layout() {
     setFabOpen(false);
   };
 
-  const handleLogout = async () => {
+  const handleLogout = () => setShowLogoutConfirm(true);
+
+  const confirmLogout = async () => {
     await signOut();
     navigate('/admin-730If1Q5/login', { replace: true });
   };
@@ -176,6 +180,15 @@ export function Layout() {
           </div>
         </main>
       </div>
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        title="Sign Out"
+        message="Are you sure you want to sign out?"
+        confirmLabel="Sign Out"
+        destructive
+        onConfirm={confirmLogout}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
     </div>
   );
 }

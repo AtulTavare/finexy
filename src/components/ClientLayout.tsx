@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, FolderKanban, FileText, CreditCard, Info, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../store/AuthContext';
+import { ConfirmDialog } from './ui';
 
 const NAV_ITEMS = [
   { path: '/client/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -15,9 +16,12 @@ export default function ClientLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
-  const [menuOpen, setMenuOpen] = React.useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  const handleLogout = async () => {
+  const handleLogout = () => setShowLogoutConfirm(true);
+
+  const confirmLogout = async () => {
     await signOut();
     navigate('/login', { replace: true });
   };
@@ -98,6 +102,15 @@ export default function ClientLayout() {
           <Outlet />
         </main>
       </div>
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        title="Sign Out"
+        message="Are you sure you want to sign out?"
+        confirmLabel="Sign Out"
+        destructive
+        onConfirm={confirmLogout}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
     </div>
   );
 }
