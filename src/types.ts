@@ -123,6 +123,22 @@ export interface Document {
   userId?: string;
 }
 
+export interface Milestone {
+  title: string;
+  description?: string;
+  dueDate: string;
+  status: 'Pending' | 'In Progress' | 'Completed';
+}
+
+export interface ProcessStep {
+  title: string;
+  description?: string;
+  order: number;
+  startDate: string;
+  endDate?: string;
+  status: 'Pending' | 'In Progress' | 'Completed';
+}
+
 export interface Project {
   id: string;
   clientId: string;
@@ -132,6 +148,9 @@ export interface Project {
   startDate: string;
   deadline: string;
   status: 'Not Started' | 'In Progress' | 'Under Review' | 'Completed';
+  overview?: string;
+  milestones?: Milestone[];
+  processSteps?: ProcessStep[];
   createdAt: string;
   userId?: string;
 }

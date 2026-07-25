@@ -16,6 +16,7 @@ import AppCalendar from './pages/Calendar';
 import ClientLogin from './pages/client/ClientLogin';
 import ClientDashboard from './pages/client/ClientDashboard';
 import ClientProjects from './pages/client/ClientProjects';
+import ClientProjectDetail from './pages/client/ClientProjectDetail';
 import ClientPayments from './pages/client/ClientPayments';
 import ClientDocuments from './pages/client/ClientDocuments';
 import ClientAbout from './pages/client/ClientAbout';
@@ -49,6 +50,7 @@ createRoot(document.getElementById('root')!).render(
             <Route element={<ClientLayout />}>
               <Route path="/client/dashboard" element={<ClientDashboard />} />
               <Route path="/client/projects" element={<ClientProjects />} />
+              <Route path="/client/projects/:id" element={<ClientProjectDetail />} />
               <Route path="/client/payments" element={<ClientPayments />} />
               <Route path="/client/documents" element={<ClientDocuments />} />
               <Route path="/client/about" element={<ClientAbout />} />

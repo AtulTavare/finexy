@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useClientData } from '../../store/ClientDataContext';
 import { Card, Badge } from '../../components/ui';
 import { formatCurrency } from '../../lib/utils';
@@ -11,6 +12,7 @@ function serviceTotalValue(svc: { price: number; billing: string; startDate: str
 }
 
 export default function ClientProjects() {
+  const navigate = useNavigate();
   const { projects, businessPayments } = useClientData();
 
   if (projects.length === 0) {
@@ -31,7 +33,7 @@ export default function ClientProjects() {
           const total = (p.servicePricing || []).reduce((s, svc) => s + serviceTotalValue(svc), 0);
           const pct = total > 0 ? Math.min(paid / total, 1) : 0;
           return (
-            <Card key={p.id} className="p-4 bg-white">
+            <Card key={p.id} className="p-4 bg-white cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/client/projects/${p.id}`)}>
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-semibold text-lg text-gray-900">{p.title}</h3>
                 <Badge variant={p.status === 'Completed' ? 'success' : p.status === 'In Progress' ? 'warning' : 'secondary'}>{p.status}</Badge>
