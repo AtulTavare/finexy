@@ -586,16 +586,17 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
           body: JSON.stringify({ email: mail, password: loginPassword, data: { role: 'client', client_id: editItem.id } }),
         });
         const signUpData = await res.json();
-        if (!signUpData.id) {
-          const msg = signUpData.code === '23505'
-            ? `Client "${mail}" already has a login. Use a different email or delete the existing auth user first.`
-            : `Login failed: ${signUpData.message || JSON.stringify(signUpData)}`;
+        const userId = signUpData.user?.id || signUpData.id;
+        if (!userId) {
+          const msg = signUpData.code === '23505' || signUpData.code === '422'
+            ? `Client "${mail}" already has a login.`
+            : `Login failed: ${signUpData.msg || signUpData.message || JSON.stringify(signUpData)}`;
           setLoginError(msg);
           setSaving(false);
           return;
         }
         const { error: linkErr } = await supabase.rpc('link_client_user', {
-          user_id: signUpData.id, client_id: editItem.id, user_name: name, email: mail,
+          user_id: userId, client_id: editItem.id, user_name: name, email: mail,
         });
         if (linkErr) { setLoginError(`Link failed: ${linkErr.message}`); setSaving(false); return; }
       }
@@ -625,16 +626,17 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
         body: JSON.stringify({ email: mail, password: loginPassword, data: { role: 'client', client_id: clientId } }),
       });
       const signUpData = await res.json();
-      if (!signUpData.id) {
-        const msg = signUpData.code === '23505'
-          ? `Client "${mail}" already has a login. Use a different email or delete the existing auth user first.`
-          : `Client saved but login failed: ${signUpData.message || JSON.stringify(signUpData)}`;
+      const userId = signUpData.user?.id || signUpData.id;
+      if (!userId) {
+        const msg = signUpData.code === '23505' || signUpData.code === '422'
+          ? `Client "${mail}" already has a login.`
+          : `Client saved but login failed: ${signUpData.msg || signUpData.message || JSON.stringify(signUpData)}`;
         setLoginError(msg);
         setSaving(false);
         return;
       }
       const { error: linkErr } = await supabase.rpc('link_client_user', {
-        user_id: signUpData.id, client_id: clientId, user_name: name, email: mail,
+        user_id: userId, client_id: clientId, user_name: name, email: mail,
       });
       if (linkErr) {
         setLoginError(`Client saved but link failed: ${linkErr.message}`);
