@@ -7,8 +7,8 @@ import { toCamelCase, toSnakeCase, generateId } from '../lib/utils';
 interface ClientInfo {
   id: string;
   clientId: string;
-  name: string;
-  mail: string;
+  userName: string;
+  email: string;
 }
 
 interface ClientDataContextType {
@@ -52,7 +52,7 @@ export function ClientDataProvider({ children }: { children: React.ReactNode }) 
       try {
         const { data: cu } = await supabase
           .from('client_users')
-          .select('id, client_id, name, mail')
+          .select('id, client_id, user_name, email')
           .eq('user_id', user.id)
           .single();
 
@@ -64,8 +64,8 @@ export function ClientDataProvider({ children }: { children: React.ReactNode }) 
         const clientInfo: ClientInfo = {
           id: cu.id,
           clientId: cu.client_id,
-          name: cu.name,
-          mail: cu.mail,
+          userName: cu.user_name,
+          email: cu.email,
         };
         setClient(clientInfo);
 
