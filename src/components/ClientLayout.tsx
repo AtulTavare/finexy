@@ -19,7 +19,7 @@ export default function ClientLayout() {
 
   const handleLogout = async () => {
     await signOut();
-    navigate('/client/login', { replace: true });
+    navigate('/login', { replace: true });
   };
 
   const initials = user?.email?.charAt(0).toUpperCase() || 'C';

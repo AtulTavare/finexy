@@ -18,7 +18,7 @@ export function ClientGuard() {
   }
 
   if (!user) {
-    return <Navigate to="/client/login" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   if (user.user_metadata?.role !== 'client') {

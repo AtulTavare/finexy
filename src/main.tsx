@@ -28,8 +28,9 @@ createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<ClientLogin />} />
           <Route path="/client/login" element={<ClientLogin />} />
+          <Route path="/admin-730If1Q5" element={<Login />} />
           <Route element={<AuthGuard />}>
             <Route element={<DataProvider> <Layout /> </DataProvider>}>
               <Route path="/" element={<Dashboard />} />
