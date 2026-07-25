@@ -21,6 +21,7 @@ import ClientPayments from './pages/client/ClientPayments';
 import ClientDocuments from './pages/client/ClientDocuments';
 import ClientAbout from './pages/client/ClientAbout';
 import { ClientGuard } from './components/ClientGuard';
+import { ClientDataProvider } from './store/ClientDataContext';
 import ClientLayout from './components/ClientLayout';
 import './index.css';
 
@@ -47,7 +48,7 @@ createRoot(document.getElementById('root')!).render(
           </Route>
           <Route path="*" element={<Navigate to="/login" replace />} />
           <Route element={<ClientGuard />}>
-            <Route element={<ClientLayout />}>
+            <Route element={<ClientDataProvider><ClientLayout /></ClientDataProvider>}>
               <Route path="/client/dashboard" element={<ClientDashboard />} />
               <Route path="/client/projects" element={<ClientProjects />} />
               <Route path="/client/projects/:id" element={<ClientProjectDetail />} />
