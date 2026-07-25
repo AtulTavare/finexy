@@ -11,3 +11,5 @@ sql/
 .idea/
 *.swp
 Thumbs.db
+
+.vercel
