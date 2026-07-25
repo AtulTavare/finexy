@@ -559,12 +559,15 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
   const [loginConfirm, setLoginConfirm] = useState('');
   const [saving, setSaving] = useState(false);
   const [loginError, setLoginError] = useState('');
+  const [hasLogin, setHasLogin] = useState(false);
 
   useEffect(() => {
     if (editItem) {
       setName(editItem.name); setBrand(editItem.brand); setContact(editItem.contact); setMail(editItem.mail); setAddress(editItem.address); setBusinessName(editItem.businessName); setStatus(editItem.status);
+      supabase.from('client_users').select('id').eq('client_id', editItem.id).maybeSingle().then(({ data }) => setHasLogin(!!data));
     } else {
       setName(''); setBrand('Infinity Innovations'); setContact(''); setMail(''); setAddress(''); setBusinessName(''); setStatus('Active');
+      setHasLogin(false);
     }
     setCreateLogin(false); setLoginPassword(''); setLoginConfirm(''); setSaving(false); setLoginError('');
   }, [editItem, isOpen]);
@@ -674,21 +677,29 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
         <div><Label>Business Name</Label><Input value={businessName} onChange={e => setBusinessName(e.target.value)} /></div>
         <div><Label>Address</Label><Input value={address} onChange={e => setAddress(e.target.value)} /></div>
         <div className="border-t border-gray-100 pt-4 space-y-3">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={createLogin}
-                onChange={e => setCreateLogin(e.target.checked)}
-                className="rounded border-gray-200 bg-white text-orange-500 focus:ring-orange-400"
-              />
-              <span className="text-xs font-medium text-gray-700">Create client login</span>
-            </label>
-            {createLogin && (
-              <>
-                <div><Label>Password</Label><Input type="password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} required placeholder="Min 6 characters" /></div>
-                <div><Label>Confirm Password</Label><Input type="password" value={loginConfirm} onChange={e => setLoginConfirm(e.target.value)} required placeholder="Re-enter password" /></div>
-              </>
-            )}
+          {editItem && hasLogin ? (
+            <div className="text-sm text-green-700 bg-green-50 px-4 py-3 rounded-xl font-medium">
+              Login credentials already created
+            </div>
+          ) : (
+            <>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={createLogin}
+                  onChange={e => setCreateLogin(e.target.checked)}
+                  className="rounded border-gray-200 bg-white text-orange-500 focus:ring-orange-400"
+                />
+                <span className="text-xs font-medium text-gray-700">Create client login</span>
+              </label>
+              {createLogin && (
+                <>
+                  <div><Label>Password</Label><Input type="password" value={loginPassword} onChange={e => setLoginPassword(e.target.value)} required placeholder="Min 6 characters" /></div>
+                  <div><Label>Confirm Password</Label><Input type="password" value={loginConfirm} onChange={e => setLoginConfirm(e.target.value)} required placeholder="Re-enter password" /></div>
+                </>
+              )}
+            </>
+          )}
           </div>
         {loginError && <div className="text-sm text-red-600 bg-red-50 px-4 py-3 rounded-xl font-medium">{loginError}</div>}
         <Button type="submit" className="w-full mt-4" disabled={saving}>
