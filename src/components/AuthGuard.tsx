@@ -20,5 +20,9 @@ export function AuthGuard() {
     return <Navigate to="/login" replace />;
   }
 
+  if (user.user_metadata?.role === 'client') {
+    return <Navigate to="/client/dashboard" replace />;
+  }
+
   return <Outlet />;
 }

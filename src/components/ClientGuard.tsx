@@ -21,6 +21,10 @@ export function ClientGuard() {
     return <Navigate to="/client/login" replace />;
   }
 
+  if (user.user_metadata?.role !== 'client') {
+    return <Navigate to="/" replace />;
+  }
+
   return (
     <ClientDataProvider>
       <Outlet />
