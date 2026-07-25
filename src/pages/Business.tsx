@@ -592,7 +592,7 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
         let userId = signUpData.user?.id || signUpData.id;
         if (!userId) {
           if (signUpData.code == 422 || signUpData.code == '23505') {
-            const { data: existingId } = await supabase.rpc('get_auth_user_id', { p_email: mail });
+            const { data: existingId } = await supabase.rpc('get_auth_user_id', { email: mail });
             if (!existingId) {
               setLoginError(`"${mail}" already registered but couldn't resolve user.`);
               setSaving(false); return;
@@ -637,7 +637,7 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
       let userId = signUpData.user?.id || signUpData.id;
       if (!userId) {
         if (signUpData.code == 422 || signUpData.code == '23505') {
-          const { data: existingId } = await supabase.rpc('get_auth_user_id', { p_email: mail });
+          const { data: existingId } = await supabase.rpc('get_auth_user_id', { email: mail });
           if (!existingId) {
             setLoginError(`"${mail}" already registered but couldn't resolve user.`);
             setSaving(false); return;
