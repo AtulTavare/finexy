@@ -7,12 +7,12 @@ import {
 import { useAuth } from '../store/AuthContext';
 
 const NAV_ITEMS = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/personal', label: 'Personal', icon: Wallet },
-  { path: '/business', label: 'Business', icon: Briefcase },
-  { path: '/projects', label: 'Projects', icon: FolderKanban },
-  { path: '/calendar', label: 'Calendar', icon: CalendarIcon },
-  { path: '/tasks', label: 'Tasks', icon: CheckSquare },
+  { path: '/admin-730If1Q5/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/admin-730If1Q5/personal', label: 'Personal', icon: Wallet },
+  { path: '/admin-730If1Q5/business', label: 'Business', icon: Briefcase },
+  { path: '/admin-730If1Q5/projects', label: 'Projects', icon: FolderKanban },
+  { path: '/admin-730If1Q5/calendar', label: 'Calendar', icon: CalendarIcon },
+  { path: '/admin-730If1Q5/tasks', label: 'Tasks', icon: CheckSquare },
 ];
 
 export function Layout() {
@@ -33,32 +33,32 @@ export function Layout() {
 
   const handleLogout = async () => {
     await signOut();
-    navigate('/login', { replace: true });
+    navigate('/admin-730If1Q5/login', { replace: true });
   };
 
   let fabActions = [
-    { label: 'Add Task', action: () => trigger('open-task-modal', '/tasks') },
+    { label: 'Add Task', action: () => trigger('open-task-modal', '/admin-730If1Q5/tasks') },
   ];
 
-  if (location.pathname === '/personal') {
+  if (location.pathname === '/admin-730If1Q5/personal') {
     fabActions = [
-      { label: 'Add Income', action: () => trigger('open-income-modal', '/personal') },
-      { label: 'Add Expense', action: () => trigger('open-expense-modal', '/personal') },
-      { label: 'Add Debt', action: () => trigger('open-debt-modal', '/personal') },
+      { label: 'Add Income', action: () => trigger('open-income-modal', '/admin-730If1Q5/personal') },
+      { label: 'Add Expense', action: () => trigger('open-expense-modal', '/admin-730If1Q5/personal') },
+      { label: 'Add Debt', action: () => trigger('open-debt-modal', '/admin-730If1Q5/personal') },
     ];
-  } else if (location.pathname === '/business') {
+  } else if (location.pathname === '/admin-730If1Q5/business') {
     fabActions = [
-      { label: 'Add Lead', action: () => trigger('open-lead-modal', '/business') },
-      { label: 'Add Client', action: () => trigger('open-client-modal', '/business') },
+      { label: 'Add Lead', action: () => trigger('open-lead-modal', '/admin-730If1Q5/business') },
+      { label: 'Add Client', action: () => trigger('open-client-modal', '/admin-730If1Q5/business') },
 
-      { label: 'Log Payment', action: () => trigger('open-payment-modal', '/business') },
-      { label: 'Add Expense', action: () => trigger('open-business-expense-modal', '/business') },
+      { label: 'Log Payment', action: () => trigger('open-payment-modal', '/admin-730If1Q5/business') },
+      { label: 'Add Expense', action: () => trigger('open-business-expense-modal', '/admin-730If1Q5/business') },
     ];
-  } else if (location.pathname === '/') {
+  } else if (location.pathname === '/admin-730If1Q5/dashboard') {
     fabActions = [
-      { label: 'Add Task', action: () => trigger('open-task-modal', '/tasks') },
-      { label: 'Add Expense', action: () => trigger('open-expense-modal', '/personal') },
-      { label: 'Add Lead', action: () => trigger('open-lead-modal', '/business') },
+      { label: 'Add Task', action: () => trigger('open-task-modal', '/admin-730If1Q5/tasks') },
+      { label: 'Add Expense', action: () => trigger('open-expense-modal', '/admin-730If1Q5/personal') },
+      { label: 'Add Lead', action: () => trigger('open-lead-modal', '/admin-730If1Q5/business') },
     ];
   }
 

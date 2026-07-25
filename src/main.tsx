@@ -30,19 +30,21 @@ createRoot(document.getElementById('root')!).render(
         <Routes>
           <Route path="/login" element={<ClientLogin />} />
           <Route path="/client/login" element={<ClientLogin />} />
-          <Route path="/admin-730If1Q5" element={<Login />} />
-          <Route element={<AuthGuard />}>
+          <Route path="/admin-730If1Q5/login" element={<Login />} />
+          <Route path="/admin-730If1Q5" element={<AuthGuard />}>
             <Route element={<DataProvider> <Layout /> </DataProvider>}>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/personal" element={<Personal />} />
-              <Route path="/business" element={<Business />} />
-              <Route path="/projects" element={<Projects />} />
-              <Route path="/calendar" element={<AppCalendar />} />
-              <Route path="/tasks" element={<Tasks />} />
-              <Route path="/project/:id" element={<ProjectDetail />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="personal" element={<Personal />} />
+              <Route path="business" element={<Business />} />
+              <Route path="projects" element={<Projects />} />
+              <Route path="calendar" element={<AppCalendar />} />
+              <Route path="tasks" element={<Tasks />} />
+              <Route path="project/:id" element={<ProjectDetail />} />
+              <Route path="*" element={<Navigate to="dashboard" replace />} />
             </Route>
           </Route>
+          <Route path="*" element={<Navigate to="/login" replace />} />
           <Route element={<ClientGuard />}>
             <Route element={<ClientLayout />}>
               <Route path="/client/dashboard" element={<ClientDashboard />} />

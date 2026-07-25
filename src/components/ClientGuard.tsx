@@ -22,7 +22,7 @@ export function ClientGuard() {
   }
 
   if (user.user_metadata?.role !== 'client') {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/admin-730If1Q5/dashboard" replace />;
   }
 
   return (

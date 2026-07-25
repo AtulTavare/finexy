@@ -23,7 +23,7 @@ export default function Login() {
   const slides = useRef(generateSlides());
 
   useEffect(() => {
-    if (user) navigate('/', { replace: true });
+    if (user) navigate('/admin-730If1Q5/dashboard', { replace: true });
   }, [user, navigate]);
 
   useEffect(() => {

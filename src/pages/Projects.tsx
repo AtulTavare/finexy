@@ -41,7 +41,7 @@ export default function Projects() {
             {projects.map(p => {
               const client = clients.find(c => c.id === p.clientId);
               return (
-                <Card key={p.id} className="p-4 flex flex-col bg-white cursor-pointer" onClick={() => navigate(`/project/${p.id}`)}>
+                <Card key={p.id} className="p-4 flex flex-col bg-white cursor-pointer" onClick={() => navigate(`/admin-730If1Q5/project/${p.id}`)}>
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-semibold text-lg">{p.title}</h3>
                     <button onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: p.id, name: p.title }); }} className="text-gray-900 hover:text-red-500 text-xs px-2 py-1">Delete</button>
