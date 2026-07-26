@@ -20,6 +20,7 @@ import ClientProjectDetail from './pages/client/ClientProjectDetail';
 import ClientPayments from './pages/client/ClientPayments';
 import ClientDocuments from './pages/client/ClientDocuments';
 import ClientAbout from './pages/client/ClientAbout';
+import ClientTerms from './pages/client/ClientTerms';
 import { ClientGuard } from './components/ClientGuard';
 import ClientLayout from './components/ClientLayout';
 import './index.css';
@@ -54,6 +55,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="/client/payments" element={<ClientPayments />} />
               <Route path="/client/documents" element={<ClientDocuments />} />
               <Route path="/client/about" element={<ClientAbout />} />
+              <Route path="/client/terms" element={<ClientTerms />} />
               <Route path="/client/*" element={<Navigate to="/client/dashboard" replace />} />
             </Route>
           </Route>

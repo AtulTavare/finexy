@@ -3,13 +3,20 @@ import { useClientData } from '../../store/ClientDataContext';
 import { Card, Badge } from '../../components/ui';
 import { formatCurrency } from '../../lib/utils';
 import { format, differenceInMonths } from 'date-fns';
-import { ArrowLeft, Download } from 'lucide-react';
+import { ArrowLeft, Download, CircleDot } from 'lucide-react';
+import type { Milestone } from '../../types';
 
 function serviceTotalValue(svc: { price: number; billing: string; startDate: string; endDate?: string }): number {
   if (svc.billing === 'one-time') return svc.price;
   if (!svc.endDate) return svc.price;
   const months = differenceInMonths(new Date(svc.endDate), new Date(svc.startDate)) + 1;
   return svc.price * Math.max(1, months);
+}
+
+function currentMilestone(milestones: Milestone[]): Milestone | null {
+  const ip = milestones.find(m => m.status === 'In Progress');
+  if (ip) return ip;
+  return milestones.find(m => m.status === 'Pending') || null;
 }
 
 export default function ClientProjectDetail() {
@@ -51,6 +58,15 @@ export default function ClientProjectDetail() {
       <div className="flex items-center gap-3 flex-wrap">
         <h1 className="text-2xl font-bold tracking-tight text-gray-900">{project.title}</h1>
         <Badge variant={project.status === 'Completed' ? 'success' : project.status === 'In Progress' ? 'warning' : 'secondary'}>{project.status}</Badge>
+        {(() => {
+          const cm = currentMilestone(project.milestones || []);
+          return cm ? (
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-medium rounded-full bg-orange-50 text-orange-700 border border-orange-200">
+              <CircleDot size={10} />
+              {cm.status === 'In Progress' ? '' : 'Next: '}{cm.title}
+            </span>
+          ) : null;
+        })()}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -135,6 +151,55 @@ export default function ClientProjectDetail() {
         </div>
       </Card>
 
+      {(project.milestones || []).length > 0 && (
+        <Card className="p-4 md:p-6">
+          <h2 className="text-sm font-semibold text-gray-900 mb-3">Milestones</h2>
+          <div className="flex items-center gap-1.5 mb-4">
+            {project.milestones!.map((m, i) => {
+              const isCompleted = m.status === 'Completed';
+              const isInProgress = m.status === 'In Progress';
+              return (
+                <div key={i} className="flex items-center gap-0">
+                  <div
+                    className={`w-3 h-3 rounded-full shrink-0 ${
+                      isCompleted ? 'bg-emerald-500' :
+                      isInProgress ? 'bg-orange-400 animate-pulse' :
+                      'bg-gray-200'
+                    }`}
+                    title={m.title}
+                  />
+                  {i < project.milestones!.length - 1 && (
+                    <div className={`w-6 sm:w-10 h-0.5 ${isCompleted ? 'bg-emerald-300' : 'bg-gray-200'}`} />
+                  )}
+                </div>
+              );
+            })}
+            <span className="text-[10px] text-gray-400 ml-1">
+              {project.milestones!.filter(m => m.status === 'Completed').length}/{project.milestones!.length}
+            </span>
+          </div>
+          <div className="space-y-2">
+            {project.milestones!.map((m, i) => (
+              <div key={i} className="flex items-start gap-3 border-b border-gray-50 pb-2 last:border-b-0">
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${m.status === 'Completed' ? 'bg-emerald-100 text-emerald-600' : m.status === 'In Progress' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-400'}`}>
+                  <div className="text-[9px] font-bold">{m.status === 'Completed' ? '✓' : m.status === 'In Progress' ? '◉' : '○'}</div>
+                </div>
+                <div className="flex-1">
+                  <div className="flex justify-between items-start">
+                    <span className="text-sm font-semibold text-gray-900">{m.title}</span>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      {m.dueDate && <span className="text-[10px] text-gray-500 whitespace-nowrap">Due {format(new Date(m.dueDate), 'MMM d, yyyy')}</span>}
+                      <Badge variant={m.status === 'Completed' ? 'success' : m.status === 'In Progress' ? 'warning' : 'default'}>{m.status}</Badge>
+                    </div>
+                  </div>
+                  {m.description && <p className="text-xs text-gray-600 mt-0.5">{m.description}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {(project.processSteps || []).length > 0 && (
         <Card className="p-4 md:p-6">
           <h2 className="text-sm font-semibold text-gray-900 mb-4">Process Timeline</h2>
@@ -156,31 +221,6 @@ export default function ClientProjectDetail() {
                     {step.startDate && <span className="text-[10px] text-gray-500">{step.startDate}{step.endDate ? ` → ${step.endDate}` : ''}</span>}
                   </div>
                   {step.description && <p className="text-xs text-gray-600 mt-1">{step.description}</p>}
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      {(project.milestones || []).length > 0 && (
-        <Card className="p-4 md:p-6">
-          <h2 className="text-sm font-semibold text-gray-900 mb-4">Milestones</h2>
-          <div className="space-y-3">
-            {(project.milestones || []).map((m, i) => (
-              <div key={i} className="flex items-start gap-3 border-b border-gray-50 pb-3">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${m.status === 'Completed' ? 'bg-emerald-100 text-emerald-600' : m.status === 'In Progress' ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-400'}`}>
-                  <div className="text-[10px] font-bold">{m.status === 'Completed' ? '✓' : m.status === 'In Progress' ? '◉' : '○'}</div>
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between items-start">
-                    <span className="text-sm font-semibold text-gray-900">{m.title}</span>
-                    <div className="flex items-center gap-2">
-                      {m.dueDate && <span className="text-[10px] text-gray-500">Due {format(new Date(m.dueDate), 'MMM d, yyyy')}</span>}
-                      <Badge variant={m.status === 'Completed' ? 'success' : m.status === 'In Progress' ? 'warning' : 'default'}>{m.status}</Badge>
-                    </div>
-                  </div>
-                  {m.description && <p className="text-xs text-gray-600 mt-0.5">{m.description}</p>}
                 </div>
               </div>
             ))}

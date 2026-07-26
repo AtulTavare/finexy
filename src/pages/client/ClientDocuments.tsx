@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, ChangeEvent } from 'react';
 import { useClientData } from '../../store/ClientDataContext';
 import { Card } from '../../components/ui';
 import { supabase } from '../../lib/supabase';
@@ -8,20 +8,22 @@ import { Download, Upload, FileText } from 'lucide-react';
 export default function ClientDocuments() {
   const { client, documents, addDocument, loading } = useClientData();
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !client) return;
 
     setUploading(true);
+    setUploadError('');
     try {
       const fileName = `${client.clientId}/${Date.now()}-${file.name}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('client-documents')
         .upload(fileName, file);
 
       if (uploadError) {
-        console.error('Upload error:', uploadError);
+        setUploadError('Upload failed. Please try again.');
         return;
       }
 
@@ -29,15 +31,21 @@ export default function ClientDocuments() {
         .from('client-documents')
         .createSignedUrl(fileName, 60 * 60 * 24 * 365);
 
-      addDocument({
+      if (!urlData?.signedUrl) {
+        setUploadError('Upload succeeded but URL generation failed.');
+        return;
+      }
+
+      await addDocument({
         clientId: client.clientId,
         name: file.name,
         type: file.type || 'application/octet-stream',
-        fileUrl: urlData?.signedUrl || '',
+        fileUrl: urlData.signedUrl,
         uploadedBy: 'client',
       });
     } catch (err) {
       console.error('Upload failed:', err);
+      setUploadError('Upload failed. Please try again.');
     } finally {
       setUploading(false);
       (e.target as HTMLInputElement).value = '';
@@ -70,6 +78,7 @@ export default function ClientDocuments() {
             disabled={uploading}
           />
         </label>
+        {uploadError && <p className="text-xs text-red-500 mt-2">{uploadError}</p>}
       </Card>
 
       {loading ? (

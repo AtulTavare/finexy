@@ -5,7 +5,7 @@ import { Card, Button, Badge, ConfirmDialog, Input, Textarea, Select, Label, Mod
 import { ProjectModal, PaymentModal } from '../components/modals';
 import { formatCurrency, generateId } from '../lib/utils';
 import { format, differenceInMonths } from 'date-fns';
-import { ArrowLeft, Trash2, Plus, Pencil, X, Check, Upload, Download } from 'lucide-react';
+import { ArrowLeft, Trash2, Plus, Pencil, X, Check, Upload, Download, ChevronDown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../store/AuthContext';
 import type { Milestone, ProcessStep } from '../types';
@@ -16,6 +16,36 @@ function serviceTotalValue(svc: { price: number; billing: string; startDate: str
   const months = differenceInMonths(new Date(svc.endDate), new Date(svc.startDate)) + 1;
   return svc.price * Math.max(1, months);
 }
+
+const MILESTONE_PRESETS: Record<string, Omit<Milestone, 'status'>[]> = {
+  'Website Development': [
+    { title: 'Discovery & Planning', description: 'Requirements gathering, sitemap, tech stack selection', dueDate: '' },
+    { title: 'Design Phase', description: 'Wireframes, mockups, brand alignment, client review', dueDate: '' },
+    { title: 'Development Phase', description: 'Frontend & backend build, integrations', dueDate: '' },
+    { title: 'Testing & QA', description: 'Cross-browser testing, load testing, bug fixes', dueDate: '' },
+    { title: 'Launch & Deploy', description: 'DNS configuration, go-live, post-launch monitoring', dueDate: '' },
+  ],
+  'App Development': [
+    { title: 'Discovery & Planning', description: 'Feature list, user flows, technical architecture', dueDate: '' },
+    { title: 'Design (UI/UX)', description: 'App prototypes, design system, user testing', dueDate: '' },
+    { title: 'Development', description: 'App build (iOS/Android/web), API integration', dueDate: '' },
+    { title: 'Internal Testing', description: 'Beta testing, bug fixes, performance tuning', dueDate: '' },
+    { title: 'App Store Submission', description: 'Store assets, submission, launch', dueDate: '' },
+  ],
+  'AI Automation': [
+    { title: 'Process Audit', description: 'Map current workflow, identify automation opportunities', dueDate: '' },
+    { title: 'Solution Design', description: 'AI agent architecture, integration plan', dueDate: '' },
+    { title: 'Development & Integration', description: 'Build agents, connect APIs, configure workflows', dueDate: '' },
+    { title: 'Testing & Training', description: 'UAT, team training, documentation', dueDate: '' },
+    { title: 'Go Live & Monitor', description: 'Production deployment, performance monitoring', dueDate: '' },
+  ],
+  'Digital Marketing': [
+    { title: 'Strategy & Research', description: 'Market research, competitor analysis, KPI definition', dueDate: '' },
+    { title: 'Campaign Setup', description: 'Channel setup, ad creative, targeting configuration', dueDate: '' },
+    { title: 'Launch & Optimize', description: 'Campaign launch, A/B testing, bid optimization', dueDate: '' },
+    { title: 'Reporting & Review', description: 'Performance report, insights, strategy adjustment', dueDate: '' },
+  ],
+};
 
 function EditableSection({ title, editing, onToggle, onCancel, onSave, children }: {
   title: string; editing: boolean; onToggle: () => void; onCancel: () => void; onSave: () => void; children: React.ReactNode;
@@ -69,9 +99,11 @@ export default function ProjectDetail() {
 
   const [editMilestones, setEditMilestones] = useState(false);
   const [milestonesVal, setMilestonesVal] = useState<Milestone[]>([]);
+  const [showPresets, setShowPresets] = useState(false);
 
   const [showMeetingModal, setShowMeetingModal] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [docUploadError, setDocUploadError] = useState('');
 
   const [showDeleteDocConfirm, setShowDeleteDocConfirm] = useState<string | null>(null);
 
@@ -154,27 +186,38 @@ export default function ProjectDetail() {
     setMilestonesVal(prev => prev.filter((_, i) => i !== index));
   };
 
+  const applyPreset = (name: string) => {
+    const preset = MILESTONE_PRESETS[name];
+    if (!preset) return;
+    setMilestonesVal(prev => [...prev, ...preset.map(m => ({ ...m, status: 'Pending' as const }))]);
+    setShowPresets(false);
+  };
+
   const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !client || !user) return;
 
     setUploadingDoc(true);
+    setDocUploadError('');
     try {
       const ext = file.name.split('.').pop();
-      const filePath = `client-documents/${client.id}/${generateId()}.${ext}`;
+      const filePath = `${client.id}/${generateId()}.${ext}`;
       const { error: uploadError } = await supabase.storage.from('client-documents').upload(filePath, file);
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage.from('client-documents').getPublicUrl(filePath);
+      const { data: urlData } = await supabase.storage.from('client-documents').createSignedUrl(filePath, 60 * 60 * 24 * 365);
+      if (!urlData?.signedUrl) throw new Error('Failed to generate signed URL');
+
       await addDocument({
         clientId: client.id,
         name: file.name,
         type: file.type,
-        fileUrl: urlData.publicUrl,
+        fileUrl: urlData.signedUrl,
         uploadedBy: 'admin',
       });
     } catch (err) {
       console.error('Upload failed', err);
+      setDocUploadError('Upload failed. Please try again.');
     } finally {
       setUploadingDoc(false);
     }
@@ -361,7 +404,25 @@ export default function ProjectDetail() {
                 <div><Label>Description</Label><Textarea value={m.description || ''} onChange={e => updateMilestone(i, 'description', e.target.value)} /></div>
               </div>
             ))}
-            <Button variant="secondary" onClick={addMilestone} className="w-full"><Plus size={14} className="mr-1" /> Add Milestone</Button>
+            <div className="flex gap-2">
+              <div className="relative">
+                <Button variant="secondary" onClick={() => setShowPresets(!showPresets)} className="text-xs px-3 py-1.5 min-h-[36px]"><ChevronDown size={14} className="mr-1" /> Presets</Button>
+                {showPresets && (
+                  <div className="absolute bottom-full mb-1 left-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 min-w-[180px] overflow-hidden">
+                    {Object.keys(MILESTONE_PRESETS).map(name => (
+                      <button
+                        key={name}
+                        onClick={() => applyPreset(name)}
+                        className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 cursor-pointer"
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <Button variant="secondary" onClick={addMilestone} className="text-xs px-3 py-1.5 min-h-[36px]"><Plus size={14} className="mr-1" /> Add Milestone</Button>
+            </div>
           </div>
         ) : (
           <div className="space-y-3">
@@ -436,6 +497,7 @@ export default function ProjectDetail() {
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-sm font-semibold text-gray-900">Documents</h2>
           <div>
+            {docUploadError && <p className="text-xs text-red-500 mb-2">{docUploadError}</p>}
             <label className="cursor-pointer inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-full transition-all bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[36px]">
               <Upload size={14} className="mr-1" /> {uploadingDoc ? 'Uploading...' : 'Upload'}
               <input type="file" className="hidden" onChange={handleDocUpload} accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" disabled={uploadingDoc} />

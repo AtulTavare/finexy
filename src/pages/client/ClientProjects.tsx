@@ -3,12 +3,20 @@ import { useClientData } from '../../store/ClientDataContext';
 import { Card, Badge } from '../../components/ui';
 import { formatCurrency } from '../../lib/utils';
 import { format, differenceInMonths } from 'date-fns';
+import { CircleDot } from 'lucide-react';
+import type { Milestone } from '../../types';
 
 function serviceTotalValue(svc: { price: number; billing: string; startDate: string; endDate?: string }): number {
   if (svc.billing === 'one-time') return svc.price;
   if (!svc.endDate) return svc.price;
   const months = differenceInMonths(new Date(svc.endDate), new Date(svc.startDate)) + 1;
   return svc.price * Math.max(1, months);
+}
+
+function currentMilestone(milestones: Milestone[]): Milestone | null {
+  const ip = milestones.find(m => m.status === 'In Progress');
+  if (ip) return ip;
+  return milestones.find(m => m.status === 'Pending') || null;
 }
 
 export default function ClientProjects() {
@@ -38,12 +46,40 @@ export default function ClientProjects() {
                 <h3 className="font-semibold text-lg text-gray-900">{p.title}</h3>
                 <Badge variant={p.status === 'Completed' ? 'success' : p.status === 'In Progress' ? 'warning' : 'secondary'}>{p.status}</Badge>
               </div>
+              {(() => {
+                const cm = currentMilestone(p.milestones || []);
+                return cm ? (
+                  <div className="flex items-center gap-1 mb-2">
+                    <CircleDot size={12} className="text-orange-500 shrink-0" />
+                    <span className="text-[10px] font-medium text-orange-700 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-200">
+                      {cm.status === 'In Progress' ? '' : 'Next: '}{cm.title}
+                    </span>
+                  </div>
+                ) : null;
+              })()}
               <div className="text-xs text-gray-500 mb-3">
                 {format(new Date(p.startDate), 'MMM d')} — {format(new Date(p.deadline), 'MMM d')}
               </div>
               <div className="flex flex-wrap gap-1 mb-3">
                 {p.services.map(s => <Badge key={s} variant="default">{s}</Badge>)}
               </div>
+              {(p.milestones || []).length > 0 && (
+                <div className="flex items-center gap-1 mb-3">
+                  {p.milestones!.map((m, i) => {
+                    const isCompleted = m.status === 'Completed';
+                    const isInProgress = m.status === 'In Progress';
+                    return (
+                      <div key={i} className="flex items-center gap-0">
+                        <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${isCompleted ? 'bg-emerald-500' : isInProgress ? 'bg-orange-400 animate-pulse' : 'bg-gray-200'}`} title={m.title} />
+                        {i < p.milestones!.length - 1 && <div className={`w-5 h-0.5 ${isCompleted ? 'bg-emerald-300' : 'bg-gray-200'}`} />}
+                      </div>
+                    );
+                  })}
+                  <span className="text-[9px] text-gray-400 ml-0.5">
+                    {p.milestones!.filter(m => m.status === 'Completed').length}/{p.milestones!.length}
+                  </span>
+                </div>
+              )}
               <div className="space-y-2">
                 {p.servicePricing?.map(svc => {
                   const sTotal = serviceTotalValue(svc);

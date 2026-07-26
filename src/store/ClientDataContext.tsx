@@ -76,10 +76,10 @@ export function ClientDataProvider({ children }: { children: React.ReactNode }) 
           supabase.from('meetings').select('*').eq('client_id', cu.client_id).order('date', { ascending: false }),
         ]);
 
-        setProjects((projRes.data || []).map(r => toCamelCase(r)) as Project[]);
-        setBusinessPayments((payRes.data || []).map(r => toCamelCase(r)) as BusinessPayment[]);
-        setDocuments((docRes.data || []).map(r => toCamelCase(r)) as Document[]);
-        setMeetings((meetRes.data || []).map(r => toCamelCase(r)) as Meeting[]);
+        setProjects((projRes.data || []).map(r => toCamelCase(r)) as any);
+        setBusinessPayments((payRes.data || []).map(r => toCamelCase(r)) as any);
+        setDocuments((docRes.data || []).map(r => toCamelCase(r)) as any);
+        setMeetings((meetRes.data || []).map(r => toCamelCase(r)) as any);
       } catch (e) {
         console.error('Failed to load client data', e);
       } finally {
@@ -92,7 +92,7 @@ export function ClientDataProvider({ children }: { children: React.ReactNode }) 
     const newItem: Document = { ...item, id: generateId(), createdAt: new Date().toISOString() };
     setDocuments(prev => [newItem, ...prev]);
     const { error } = await supabase.from('client_documents').insert({
-      ...toSnakeCase(newItem),
+      ...(toSnakeCase(newItem as any) as any),
       user_id: user!.id,
     });
     if (error) {

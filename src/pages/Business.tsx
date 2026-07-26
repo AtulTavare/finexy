@@ -615,7 +615,7 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
     setSaving(true);
     setLoginError('');
 
-    const clientId = await onSave({ name, brand, contact, mail, address, businessName, status });
+    const clientId = await onSave({ name, brand, contact, mail, address, businessName, status, services: [] });
 
     if (createLogin && clientId && mail && loginPassword) {
       if (loginPassword.length < 6) {
