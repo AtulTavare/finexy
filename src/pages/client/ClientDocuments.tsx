@@ -17,13 +17,15 @@ export default function ClientDocuments() {
     setUploading(true);
     setUploadError('');
     try {
-      const fileName = `${client.clientId}/${Date.now()}-${file.name}`;
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const fileName = `${client.clientId}/${Date.now()}-${safeName}`;
       const { error: uploadError } = await supabase.storage
         .from('client-documents')
         .upload(fileName, file);
 
       if (uploadError) {
-        setUploadError('Upload failed. Please try again.');
+        console.error('Storage upload error:', uploadError);
+        setUploadError(`Upload failed: ${uploadError.message}`);
         return;
       }
 
