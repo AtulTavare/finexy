@@ -1,19 +1,31 @@
 import { useState, ChangeEvent } from 'react';
 import { useClientData } from '../../store/ClientDataContext';
-import { Card } from '../../components/ui';
+import { Card, ConfirmDialog } from '../../components/ui';
 import { supabase } from '../../lib/supabase';
 import { format } from 'date-fns';
-import { Download, Upload, FileText } from 'lucide-react';
+import { Download, Upload, FileText, CheckCircle } from 'lucide-react';
 
 export default function ClientDocuments() {
   const { client, documents, addDocument, loading } = useClientData();
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [successMsg, setSuccessMsg] = useState('');
 
-  const handleUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+  const onFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    if (!file) return;
+    setPendingFile(file);
+    setUploadError('');
+    setSuccessMsg('');
+    e.target.value = '';
+  };
+
+  const confirmUpload = async () => {
+    const file = pendingFile;
     if (!file || !client) return;
 
+    setPendingFile(null);
     setUploading(true);
     setUploadError('');
     try {
@@ -45,12 +57,14 @@ export default function ClientDocuments() {
         fileUrl: urlData.signedUrl,
         uploadedBy: 'client',
       });
+
+      setSuccessMsg('Document uploaded successfully!');
+      setTimeout(() => setSuccessMsg(''), 4000);
     } catch (err) {
       console.error('Upload failed:', err);
       setUploadError('Upload failed. Please try again.');
     } finally {
       setUploading(false);
-      (e.target as HTMLInputElement).value = '';
     }
   };
 
@@ -76,11 +90,16 @@ export default function ClientDocuments() {
           <input
             type="file"
             className="hidden"
-            onChange={handleUpload}
+            onChange={onFileSelect}
             disabled={uploading}
           />
         </label>
         {uploadError && <p className="text-xs text-red-500 mt-2">{uploadError}</p>}
+        {successMsg && (
+          <p className="flex items-center gap-1.5 text-xs text-emerald-600 mt-2 font-medium">
+            <CheckCircle size={14} /> {successMsg}
+          </p>
+        )}
       </Card>
 
       {loading ? (
@@ -124,6 +143,15 @@ export default function ClientDocuments() {
           </div>
         </Card>
       )}
+      <ConfirmDialog
+        isOpen={!!pendingFile}
+        title="Upload Document"
+        message={pendingFile ? `Send "${pendingFile.name}" to Infinity Innovations?` : ''}
+        confirmLabel="Upload"
+        destructive={false}
+        onConfirm={confirmUpload}
+        onCancel={() => setPendingFile(null)}
+      />
     </div>
   );
 }
