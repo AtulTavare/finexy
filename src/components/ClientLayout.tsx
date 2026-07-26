@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FolderKanban, FileText, CreditCard, Info, Scale, Calendar, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, FileText, CreditCard, Info, Scale, Calendar, LogOut } from 'lucide-react';
 import { useAuth } from '../store/AuthContext';
 import { useClientData } from '../store/ClientDataContext';
 import { ConfirmDialog } from './ui';
@@ -20,7 +20,6 @@ export default function ClientLayout() {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
   const { client } = useClientData();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const handleLogout = () => setShowLogoutConfirm(true);
@@ -73,45 +72,34 @@ export default function ClientLayout() {
                 initials
               )}
             </button>
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="md:hidden w-10 h-10 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-full cursor-pointer"
-            >
-              {menuOpen ? <X size={20} /> : <Menu size={20} />}
-            </button>
           </div>
         </header>
 
-        {menuOpen && (
-          <div className="md:hidden bg-white border-b border-gray-100 px-4 py-2 space-y-1">
+
+        <main className="flex-1 overflow-y-auto no-scrollbar p-4 md:p-8 pb-24 md:pb-8">
+          <Outlet />
+        </main>
+
+        {/* Mobile dock-style nav */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 flex justify-center pb-3 pt-1 z-50 pointer-events-none">
+          <div className="flex items-center justify-around bg-white/90 backdrop-blur-xl rounded-2xl shadow-lg shadow-black/5 border border-gray-100/80 px-1 py-1.5 mx-3 max-w-[95vw] w-full pointer-events-auto">
             {NAV_ITEMS.map((item) => {
               const isActive = location.pathname === item.path;
               return (
                 <NavLink
                   key={item.path}
                   to={item.path}
-                  onClick={() => setMenuOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                    isActive ? 'bg-[#18181b] text-white' : 'text-gray-600 hover:bg-gray-100'
+                  className={`flex flex-col items-center justify-center gap-0.5 px-1.5 py-1.5 rounded-xl transition-all min-w-0 flex-1 ${
+                    isActive ? 'bg-[#18181b] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'
                   }`}
                 >
-                  <item.icon size={18} />
-                  {item.label}
+                  <item.icon size={18} className={isActive ? 'stroke-[2.5]' : 'stroke-2'} />
+                  <span className="text-[8px] font-medium leading-none whitespace-nowrap">{item.label}</span>
                 </NavLink>
               );
             })}
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 w-full cursor-pointer"
-            >
-              <LogOut size={18} /> Sign Out
-            </button>
           </div>
-        )}
-
-        <main className="flex-1 overflow-y-auto no-scrollbar p-4 md:p-8">
-          <Outlet />
-        </main>
+        </div>
       </div>
       <ConfirmDialog
         isOpen={showLogoutConfirm}
