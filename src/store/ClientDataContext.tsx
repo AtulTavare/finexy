@@ -17,6 +17,13 @@ interface ClientInfo {
   clientId: string;
   userName: string;
   email: string;
+  avatarUrl?: string;
+  contact?: string;
+  mail?: string;
+  address?: string;
+  businessName?: string;
+  brand?: string;
+  status?: string;
 }
 
 interface ClientDataContextType {
@@ -74,11 +81,24 @@ export function ClientDataProvider({ children }: { children: React.ReactNode }) 
           return;
         }
 
+        const { data: clientRec } = await supabase
+          .from('clients')
+          .select('avatar_url, contact, mail, address, business_name, brand, status')
+          .eq('id', cu.client_id)
+          .single();
+
         const clientInfo: ClientInfo = {
           id: cu.id,
           clientId: cu.client_id,
           userName: cu.user_name,
           email: cu.email,
+          avatarUrl: (clientRec && 'avatar_url' in clientRec ? clientRec.avatar_url : undefined) as string | undefined,
+          contact: (clientRec && 'contact' in clientRec ? clientRec.contact : undefined) as string | undefined,
+          mail: (clientRec && 'mail' in clientRec ? clientRec.mail : undefined) as string | undefined,
+          address: (clientRec && 'address' in clientRec ? clientRec.address : undefined) as string | undefined,
+          businessName: (clientRec && 'business_name' in clientRec ? clientRec.business_name : undefined) as string | undefined,
+          brand: (clientRec && 'brand' in clientRec ? clientRec.brand : undefined) as string | undefined,
+          status: (clientRec && 'status' in clientRec ? clientRec.status : undefined) as string | undefined,
         };
         setClient(clientInfo);
 

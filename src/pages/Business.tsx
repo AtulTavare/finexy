@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useData } from '../store/DataContext';
 import { Card, Button, Input, Select, Label, Modal, Badge, DatePicker, ConfirmDialog } from '../components/ui';
 import { formatCurrency } from '../lib/utils';
 import { Brand, Lead, Client, BusinessPayment, BusinessExpense, Project, Installment } from '../types';
 import { format } from 'date-fns';
-import { Trash2 } from 'lucide-react';
+import { Trash2, User, Camera } from 'lucide-react';
 import { supabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase';
 import { useAuth } from '../store/AuthContext';
 import { PaymentModal } from '../components/modals';
@@ -701,17 +701,44 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
   const [saving, setSaving] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [hasLogin, setHasLogin] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (editItem) {
       setName(editItem.name); setBrand(editItem.brand); setContact(editItem.contact); setMail(editItem.mail); setAddress(editItem.address); setBusinessName(editItem.businessName); setStatus(editItem.status);
+      setAvatarPreview(editItem.avatarUrl || null);
       supabase.from('client_users').select('id').eq('client_id', editItem.id).maybeSingle().then(({ data }) => setHasLogin(!!data));
     } else {
       setName(''); setBrand('Infinity Innovations'); setContact(''); setMail(''); setAddress(''); setBusinessName(''); setStatus('Active');
-      setHasLogin(false);
+      setHasLogin(false); setAvatarPreview(null);
     }
-    setCreateLogin(false); setLoginPassword(''); setLoginConfirm(''); setSaving(false); setLoginError('');
+    setCreateLogin(false); setLoginPassword(''); setLoginConfirm(''); setSaving(false); setLoginError(''); setAvatarFile(null);
   }, [editItem, isOpen]);
+
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setAvatarPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const uploadAvatar = async (clientId: string) => {
+    if (!avatarFile) return;
+    const path = `avatars/${clientId}`;
+    const { error: uploadErr } = await supabase.storage.from('avatars').upload(path, avatarFile, { upsert: true });
+    if (uploadErr) {
+      console.error('Avatar upload failed:', uploadErr);
+      return;
+    }
+    const { data: signed } = await supabase.storage.from('avatars').createSignedUrl(path, 31536000);
+    if (signed?.signedUrl) {
+      return signed.signedUrl;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -749,6 +776,10 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
         });
         if (linkErr) { setLoginError(`Link failed: ${linkErr.message}`); setSaving(false); return; }
       }
+      if (avatarFile) {
+        const signedUrl = await uploadAvatar(editItem.id);
+        if (signedUrl) onUpdate(editItem.id, { avatarUrl: signedUrl });
+      }
       onClose();
       return;
     }
@@ -757,6 +788,11 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
     setLoginError('');
 
     const clientId = await onSave({ name, brand, contact, mail, address, businessName, status, services: [] });
+
+    if (avatarFile && clientId) {
+      const signedUrl = await uploadAvatar(clientId);
+      if (signedUrl) onUpdate(clientId, { avatarUrl: signedUrl });
+    }
 
     if (createLogin && clientId && mail && loginPassword) {
       if (loginPassword.length < 6) {
@@ -806,6 +842,22 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={editItem ? 'Edit Client' : 'Add Client'}>
       <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="flex justify-center">
+          <div
+            className="relative w-24 h-24 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-orange-500 overflow-hidden group"
+            onClick={() => avatarInputRef.current?.click()}
+          >
+            {avatarPreview ? (
+              <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover rounded-full" />
+            ) : (
+              <User size={32} className="text-gray-400" />
+            )}
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-full flex items-center justify-center">
+              <Camera size={20} className="text-white" />
+            </div>
+          </div>
+          <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarSelect} />
+        </div>
         <div><Label>Name</Label><Input value={name} onChange={e => setName(e.target.value)} required /></div>
         <div className="grid grid-cols-2 gap-4">
           <div>

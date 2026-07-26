@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, FolderKanban, FileText, CreditCard, Info, Scale, Calendar, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../store/AuthContext';
+import { useClientData } from '../store/ClientDataContext';
 import { ConfirmDialog } from './ui';
 
 const NAV_ITEMS = [
@@ -18,6 +19,7 @@ export default function ClientLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
+  const { client } = useClientData();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -61,9 +63,16 @@ export default function ClientLayout() {
             >
               <LogOut size={14} /> Sign Out
             </button>
-            <div className="w-8 h-8 rounded-full bg-[#f97316] text-white flex items-center justify-center text-sm font-bold">
-              {initials}
-            </div>
+            <button
+              onClick={() => navigate('/client/profile')}
+              className="w-8 h-8 rounded-full bg-[#f97316] text-white flex items-center justify-center text-sm font-bold overflow-hidden hover:ring-2 hover:ring-orange-500 transition-all cursor-pointer"
+            >
+              {client?.avatarUrl ? (
+                <img src={client.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                initials
+              )}
+            </button>
             <button
               onClick={() => setMenuOpen(!menuOpen)}
               className="md:hidden w-10 h-10 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-full cursor-pointer"

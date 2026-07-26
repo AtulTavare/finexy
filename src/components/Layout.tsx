@@ -125,13 +125,20 @@ export function Layout() {
                 </button>
                 <button onClick={handleLogout} className="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:text-red-500 hover:bg-gray-50"><LogOut size={18} /></button>
               </div>
-              <div className="bg-white rounded-full p-1 flex items-center pr-4 shadow-sm border border-gray-100">
-                <div className="w-8 h-8 rounded-full bg-[#f97316] text-white flex items-center justify-center mr-2 text-sm font-bold">{initials}</div>
-                <div className="flex flex-col">
+              <button
+                onClick={() => navigate('/admin-730If1Q5/profile')}
+                className="bg-white rounded-full p-1 flex items-center pr-4 shadow-sm border border-gray-100 hover:border-orange-500 transition-colors cursor-pointer"
+              >
+                {user?.user_metadata?.avatar_url ? (
+                  <img src={user.user_metadata.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full object-cover mr-2" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-[#f97316] text-white flex items-center justify-center mr-2 text-sm font-bold">{initials}</div>
+                )}
+                <div className="flex flex-col text-left">
                   <span className="text-xs font-semibold">{user?.email?.split('@')[0] || 'User'}</span>
                   <span className="text-[10px] text-gray-500">{user?.email || ''}</span>
                 </div>
-              </div>
+              </button>
             </div>
           </header>
 
