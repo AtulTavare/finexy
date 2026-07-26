@@ -30,13 +30,15 @@ function getServiceCurrentMonthDue(
   const overdue = Math.max(0, expected - totalPaid);
 
   const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth()).padStart(2, '0')}`;
-  const currentMonthPaid = svcPayments.some(p => {
-    const d = new Date(p.date);
-    return `${d.getFullYear()}-${String(d.getMonth()).padStart(2, '0')}` === currentMonthKey;
-  });
+  const currentMonthPaidSum = svcPayments
+    .filter(p => {
+      const d = new Date(p.date);
+      return `${d.getFullYear()}-${String(d.getMonth()).padStart(2, '0')}` === currentMonthKey;
+    })
+    .reduce((s, p) => s + p.amount, 0);
 
   return {
-    currentMonthDue: currentMonthPaid ? 0 : svc.price,
+    currentMonthDue: Math.max(0, svc.price - currentMonthPaidSum),
     overdue,
   };
 }
@@ -148,7 +150,13 @@ export default function ClientProjects() {
                       </div>
                       <div className="flex justify-between text-[10px]">
                         <span className={r.currentMonthDue === 0 ? 'text-emerald-600' : 'text-orange-600'}>
-                          {r.currentMonthDue === 0 ? '✓ This month paid' : `${formatCurrency(r.currentMonthDue)} due`}
+                          {r.currentMonthDue === 0
+                            ? svc.billing === 'one-time'
+                              ? '✓ Paid'
+                              : new Date(svc.startDate) > new Date()
+                                ? `Starts ${format(new Date(svc.startDate), 'MMM d')}`
+                                : '✓ This month paid'
+                            : `${formatCurrency(r.currentMonthDue)} ${svc.billing === 'one-time' ? 'remaining' : 'due'}`}
                         </span>
                         <span className="text-gray-400">
                           {nextDue > 0 && r.currentMonthDue === 0 ? `${formatCurrency(nextDue)} upcoming` : ''}
