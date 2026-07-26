@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
+import Lottie from 'lottie-react';
+import animationData from '../assets/infinity-loader.json';
 
 const SLIDE_COUNT = 12;
 
@@ -13,7 +15,7 @@ function generateSlides() {
 }
 
 export default function Login() {
-  const { signIn, user } = useAuth();
+  const { signIn, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,9 +24,22 @@ export default function Login() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const slides = useRef(generateSlides());
 
-  useEffect(() => {
-    if (user) navigate('/admin-730If1Q5/dashboard', { replace: true });
-  }, [user, navigate]);
+  if (authLoading) {
+    return (
+      <div className="flex h-[100dvh] items-center justify-center bg-[#f4f5f7]">
+        <div className="w-40 h-40">
+          <Lottie animationData={animationData} loop />
+        </div>
+      </div>
+    );
+  }
+
+  if (user) {
+    if (user.user_metadata?.role === 'client') {
+      return <Navigate to="/client/dashboard" replace />;
+    }
+    return <Navigate to="/admin-730If1Q5/dashboard" replace />;
+  }
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -46,7 +61,6 @@ export default function Login() {
 
   return (
     <div className="flex h-[100dvh] w-full bg-[#f4f5f7]">
-      {/* Left: Image Slideshow */}
       <div className="hidden md:flex relative flex-1 overflow-hidden bg-black">
         <AnimatePresence mode="wait">
           <motion.img
@@ -80,7 +94,6 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Right: Login Form */}
       <div className="flex-1 flex items-center justify-center p-4 md:p-8 bg-white">
         <div className="w-full max-w-sm">
           <div className="md:hidden flex items-center space-x-3 mb-10">

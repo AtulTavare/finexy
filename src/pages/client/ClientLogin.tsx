@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../../store/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { motion, AnimatePresence } from 'motion/react';
+import Lottie from 'lottie-react';
+import animationData from '../../assets/infinity-loader.json';
+import ClientOnboarding from '../../components/ClientOnboarding';
 
 const SLIDE_COUNT = 8;
 
@@ -15,34 +18,41 @@ function generateSlides() {
 }
 
 export default function ClientLogin() {
-  const { signIn, user } = useAuth();
+  const { signIn, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [showLogin, setShowLogin] = useState(false);
   const slides = useRef(generateSlides());
 
-  useEffect(() => {
-    if (user) {
-      supabase.from('client_users').select('id').eq('user_id', user.id).single().then(({ data }) => {
-        if (data) {
-          navigate('/client/dashboard', { replace: true });
-        } else {
-          supabase.auth.signOut();
-          setError('This account does not have client access. Please use the admin login.');
-        }
-      });
-    }
-  }, [user, navigate]);
+  if (authLoading) {
+    return (
+      <div className="flex h-[100dvh] items-center justify-center bg-[#f4f5f7]">
+        <div className="w-40 h-40">
+          <Lottie animationData={animationData} loop />
+        </div>
+      </div>
+    );
+  }
+
+  if (user) {
+    return <Navigate to="/client/dashboard" replace />;
+  }
 
   useEffect(() => {
+    if (!showLogin) return;
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % SLIDE_COUNT);
     }, 2000);
     return () => clearInterval(interval);
-  }, []);
+  }, [showLogin]);
+
+  if (!showLogin) {
+    return <ClientOnboarding onComplete={() => setShowLogin(true)} />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
