@@ -4,13 +4,41 @@ import { Card, Badge } from '../../components/ui';
 import { formatCurrency } from '../../lib/utils';
 import { format, differenceInMonths } from 'date-fns';
 import { ArrowLeft, Download, CircleDot } from 'lucide-react';
-import type { Milestone } from '../../types';
+import type { Milestone, ServicePricing, BusinessPayment } from '../../types';
 
-function serviceTotalValue(svc: { price: number; billing: string; startDate: string; endDate?: string }): number {
-  if (svc.billing === 'one-time') return svc.price;
-  if (!svc.endDate) return svc.price;
-  const months = differenceInMonths(new Date(svc.endDate), new Date(svc.startDate)) + 1;
-  return svc.price * Math.max(1, months);
+function getServiceCurrentMonthDue(
+  svc: ServicePricing,
+  payments: BusinessPayment[],
+  projectId: string,
+): { currentMonthDue: number; overdue: number } {
+  const svcPayments = payments.filter(p => p.projectId === projectId && p.serviceName === svc.name);
+  const totalPaid = svcPayments.reduce((s, p) => s + p.amount, 0);
+  const now = new Date();
+
+  if (svc.billing === 'one-time') {
+    const remaining = Math.max(0, svc.price - totalPaid);
+    return { currentMonthDue: remaining, overdue: 0 };
+  }
+
+  const start = new Date(svc.startDate);
+  if (start > now) return { currentMonthDue: 0, overdue: 0 };
+
+  const end = svc.endDate ? new Date(svc.endDate) : null;
+  const effectiveEnd = end && end < now ? end : now;
+  const monthsElapsed = differenceInMonths(effectiveEnd, start) + 1;
+  const expected = Math.max(1, monthsElapsed) * svc.price;
+  const overdue = Math.max(0, expected - totalPaid);
+
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth()).padStart(2, '0')}`;
+  const currentMonthPaid = svcPayments.some(p => {
+    const d = new Date(p.date);
+    return `${d.getFullYear()}-${String(d.getMonth()).padStart(2, '0')}` === currentMonthKey;
+  });
+
+  return {
+    currentMonthDue: currentMonthPaid ? 0 : svc.price,
+    overdue,
+  };
 }
 
 function currentMilestone(milestones: Milestone[]): Milestone | null {
@@ -39,10 +67,25 @@ export default function ClientProjectDetail() {
     );
   }
 
-  const totalBudget = project.servicePricing.reduce((sum, s) => sum + serviceTotalValue(s), 0);
   const totalPaid = businessPayments.filter(p => p.projectId === project.id).reduce((s, p) => s + p.amount, 0);
-  const remaining = Math.max(0, totalBudget - totalPaid);
-  const pct = totalBudget > 0 ? Math.min(totalPaid / totalBudget, 1) : 0;
+
+  const monthlyCommitment = (project.servicePricing || []).reduce((s, svc) => {
+    if (svc.billing === 'monthly') return s + svc.price;
+    return s;
+  }, 0);
+
+  let currentMonthDue = 0;
+  let totalOverdue = 0;
+  for (const svc of project.servicePricing || []) {
+    const r = getServiceCurrentMonthDue(svc, businessPayments, project.id);
+    currentMonthDue += r.currentMonthDue;
+    totalOverdue += r.overdue;
+  }
+
+  const milestones = project.milestones || [];
+  const milestonePct = milestones.length > 0
+    ? Math.round((milestones.filter(m => m.status === 'Completed').length / milestones.length) * 100)
+    : 0;
 
   const projectPayments = businessPayments.filter(p => p.projectId === project.id);
   const clientDocs = documents.filter(d => d.clientId === project.clientId);
@@ -71,37 +114,59 @@ export default function ClientProjectDetail() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="p-4">
-          <div className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-1">Total Budget</div>
-          <div className="text-lg md:text-xl font-bold text-gray-900">{formatCurrency(totalBudget)}</div>
+          <div className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-1">
+            {monthlyCommitment > 0 ? 'Monthly Commitment' : 'Total Budget'}
+          </div>
+          <div className="text-lg md:text-xl font-bold text-gray-900">
+            {monthlyCommitment > 0 ? formatCurrency(monthlyCommitment) + '/mo' : formatCurrency(currentMonthDue)}
+          </div>
         </Card>
         <Card className="p-4">
           <div className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-1">Collected</div>
           <div className="text-lg md:text-xl font-bold text-emerald-600">{formatCurrency(totalPaid)}</div>
         </Card>
         <Card className="p-4">
-          <div className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-1">Remaining</div>
-          <div className="text-lg md:text-xl font-bold text-orange-600">{formatCurrency(remaining)}</div>
+          <div className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-1">Due This Month</div>
+          <div className="text-lg md:text-xl font-bold text-orange-600">
+            {currentMonthDue > 0 ? formatCurrency(currentMonthDue) : '—'}
+          </div>
+          {totalOverdue > currentMonthDue && (
+            <div className="text-[9px] text-red-500">+{formatCurrency(totalOverdue - currentMonthDue)} overdue</div>
+          )}
         </Card>
         <Card className="p-4">
           <div className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold mb-1">Progress</div>
-          <div className="text-lg md:text-xl font-bold text-gray-900">{Math.round(pct * 100)}%</div>
+          <div className="text-lg md:text-xl font-bold text-gray-900">
+            {milestones.length > 0 ? `${milestonePct}%` : '—'}
+          </div>
         </Card>
       </div>
 
       <Card className="p-4 md:p-6">
         <div className="flex justify-between items-center mb-3">
-          <h2 className="text-sm font-semibold text-gray-900">Overall Progress</h2>
+          <h2 className="text-sm font-semibold text-gray-900">
+            {milestones.length > 0 ? 'Milestone Progress' : 'Payment Progress'}
+          </h2>
           <div className="text-xs text-gray-500">{format(new Date(project.startDate), 'MMM d')} — {format(new Date(project.deadline), 'MMM d')}</div>
         </div>
-        <div className="w-full bg-orange-300/50 rounded-full h-3 overflow-hidden flex">
-          <div className="bg-emerald-500 h-3 transition-all" style={{ width: `${pct * 100}%` }} />
-        </div>
-        <div className="flex justify-between text-xs mt-2">
-          <span className="text-emerald-600 font-semibold">{formatCurrency(totalPaid)} collected</span>
-          <span className={remaining > 0 ? 'text-orange-600 font-semibold' : 'text-gray-400'}>
-            {remaining > 0 ? `${formatCurrency(remaining)} remaining` : 'Fully paid'}
-          </span>
-        </div>
+        {milestones.length > 0 ? (
+          <div className="space-y-2">
+            <div className="w-full bg-orange-300/50 rounded-full h-3 overflow-hidden flex">
+              <div className="bg-emerald-500 h-3 transition-all" style={{ width: `${milestonePct}%` }} />
+            </div>
+            <div className="flex justify-between text-xs mt-2">
+              <span className="text-emerald-600 font-semibold">{milestones.filter(m => m.status === 'Completed').length}/{milestones.length} milestones completed</span>
+              {currentMonthDue > 0 && <span className="text-orange-600 font-semibold">{formatCurrency(currentMonthDue)} due this month</span>}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex justify-between text-xs mt-2">
+              <span className="text-emerald-600 font-semibold">{formatCurrency(totalPaid)} collected</span>
+              {currentMonthDue > 0 && <span className="text-orange-600 font-semibold">{formatCurrency(currentMonthDue)} due this month</span>}
+            </div>
+          </div>
+        )}
       </Card>
 
       {project.overview && (
@@ -115,9 +180,7 @@ export default function ClientProjectDetail() {
         <h2 className="text-sm font-semibold text-gray-900 mb-4">Services &amp; Pricing</h2>
         <div className="space-y-4">
           {project.servicePricing.map(svc => {
-            const sTotal = serviceTotalValue(svc);
-            const paid = businessPayments.filter(p => p.projectId === project.id && p.serviceName === svc.name).reduce((sum, p) => sum + p.amount, 0);
-            const sPct = sTotal > 0 ? Math.min(paid / sTotal, 1) : 0;
+            const r = getServiceCurrentMonthDue(svc, businessPayments, project.id);
             const started = new Date(svc.startDate) <= new Date();
             return (
               <div key={svc.name} className="border border-gray-100 rounded-xl p-3">
@@ -128,19 +191,26 @@ export default function ClientProjectDetail() {
                   </div>
                   <span className="text-sm font-semibold text-gray-900">
                     {svc.billing === 'one-time' ? formatCurrency(svc.price) : `${formatCurrency(svc.price)}/mo`}
-                    {svc.billing === 'monthly' && svc.endDate && <span className="text-[10px] text-gray-400 ml-1 font-normal">({formatCurrency(sTotal)} total)</span>}
                   </span>
                 </div>
                 {started && (
-                  <>
-                    <div className="w-full bg-orange-300/50 rounded-full h-2 overflow-hidden flex">
-                      <div className="bg-emerald-500 h-2 transition-all" style={{ width: `${sPct * 100}%` }} />
-                    </div>
-                    <div className="flex justify-between text-[11px] mt-1">
-                      <span className="text-emerald-600 font-medium">{formatCurrency(paid)} collected</span>
-                      <span className="text-gray-500">{Math.round(sPct * 100)}%</span>
-                    </div>
-                  </>
+                  <div className="flex justify-between items-center text-xs mt-2">
+                    {svc.billing === 'one-time' ? (
+                      <>
+                        <span className="text-emerald-600 font-medium">{formatCurrency(svc.price - (r.currentMonthDue || r.overdue))} paid</span>
+                        {r.currentMonthDue > 0 && <span className="text-orange-600 font-medium">{formatCurrency(r.currentMonthDue)} remaining</span>}
+                      </>
+                    ) : (
+                      <>
+                        <span className={`font-medium ${r.currentMonthDue === 0 ? 'text-emerald-600' : 'text-orange-600'}`}>
+                          {r.currentMonthDue === 0 ? '✓ This month paid' : `${formatCurrency(r.currentMonthDue)} due this month`}
+                        </span>
+                        {r.overdue > r.currentMonthDue && (
+                          <span className="text-red-500">{formatCurrency(r.overdue - r.currentMonthDue)} overdue</span>
+                        )}
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
             );

@@ -151,15 +151,9 @@ export default function ClientDashboard() {
                   const milestones = project.milestones || [];
                   const steps = project.processSteps || [];
                   const currentMilestone = getCurrentMilestone(milestones);
-                  const projectPaid = businessPayments.filter(p => p.projectId === project.id).reduce((s, p) => s + p.amount, 0);
-                  const totalBudget = (project.servicePricing || []).reduce((s, svc) => {
-                    if (svc.billing === 'one-time') return s + svc.price;
-                    const start = new Date(svc.startDate);
-                    const end = svc.endDate ? new Date(svc.endDate) : null;
-                    const months = end ? differenceInMonths(end, start) + 1 : 1;
-                    return s + svc.price * Math.max(1, months);
-                  }, 0);
-                  const pct = totalBudget > 0 ? Math.min(projectPaid / totalBudget, 1) : 0;
+                  const milestonePct = milestones.length > 0
+                    ? Math.round((milestones.filter(m => m.status === 'Completed').length / milestones.length) * 100)
+                    : 0;
 
                   return (
                     <Card
@@ -247,11 +241,15 @@ export default function ClientDashboard() {
                       <div className="mt-3 pt-3 border-t border-gray-100">
                         <div className="flex justify-between text-[10px]">
                           <span className="text-gray-500">{format(new Date(project.startDate), 'MMM d')} — {format(new Date(project.deadline), 'MMM d')}</span>
-                          <span className="font-medium text-gray-900">{Math.round(pct * 100)}% complete</span>
+                          {milestones.length > 0 && (
+                            <span className="font-medium text-gray-900">{milestonePct}% complete</span>
+                          )}
                         </div>
-                        <div className="w-full bg-orange-300/50 rounded-full h-1.5 overflow-hidden mt-1">
-                          <div className="bg-emerald-500 h-1.5 transition-all" style={{ width: `${pct * 100}%` }} />
-                        </div>
+                        {milestones.length > 0 && (
+                          <div className="w-full bg-orange-300/50 rounded-full h-1.5 overflow-hidden mt-1">
+                            <div className="bg-emerald-500 h-1.5 transition-all" style={{ width: `${milestonePct}%` }} />
+                          </div>
+                        )}
                       </div>
                     </Card>
                   );
