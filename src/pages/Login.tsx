@@ -45,7 +45,7 @@ export default function Login() {
     if (user.user_metadata?.role === 'client') {
       return <Navigate to="/client/dashboard" replace />;
     }
-    return <Navigate to="/admin-730If1Q5/dashboard" replace />;
+    return <Navigate to="/admin-shubhaminfinity/dashboard" replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -8,12 +8,12 @@ import { useAuth } from '../store/AuthContext';
 import { ConfirmDialog } from './ui';
 
 const NAV_ITEMS = [
-  { path: '/admin-730If1Q5/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/admin-730If1Q5/personal', label: 'Personal', icon: Wallet },
-  { path: '/admin-730If1Q5/business', label: 'Business', icon: Briefcase },
-  { path: '/admin-730If1Q5/projects', label: 'Projects', icon: FolderKanban },
-  { path: '/admin-730If1Q5/calendar', label: 'Calendar', icon: CalendarIcon },
-  { path: '/admin-730If1Q5/tasks', label: 'Tasks', icon: CheckSquare },
+  { path: '/admin-shubhaminfinity/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/admin-shubhaminfinity/personal', label: 'Personal', icon: Wallet },
+  { path: '/admin-shubhaminfinity/business', label: 'Business', icon: Briefcase },
+  { path: '/admin-shubhaminfinity/projects', label: 'Projects', icon: FolderKanban },
+  { path: '/admin-shubhaminfinity/calendar', label: 'Calendar', icon: CalendarIcon },
+  { path: '/admin-shubhaminfinity/tasks', label: 'Tasks', icon: CheckSquare },
 ];
 
 export function Layout() {
@@ -37,32 +37,32 @@ export function Layout() {
 
   const confirmLogout = async () => {
     await signOut();
-    navigate('/admin-730If1Q5/login', { replace: true });
+    navigate('/admin-shubhaminfinity/login', { replace: true });
   };
 
   let fabActions = [
-    { label: 'Add Task', action: () => trigger('open-task-modal', '/admin-730If1Q5/tasks') },
+    { label: 'Add Task', action: () => trigger('open-task-modal', '/admin-shubhaminfinity/tasks') },
   ];
 
-  if (location.pathname === '/admin-730If1Q5/personal') {
+  if (location.pathname === '/admin-shubhaminfinity/personal') {
     fabActions = [
-      { label: 'Add Income', action: () => trigger('open-income-modal', '/admin-730If1Q5/personal') },
-      { label: 'Add Expense', action: () => trigger('open-expense-modal', '/admin-730If1Q5/personal') },
-      { label: 'Add Debt', action: () => trigger('open-debt-modal', '/admin-730If1Q5/personal') },
+      { label: 'Add Income', action: () => trigger('open-income-modal', '/admin-shubhaminfinity/personal') },
+      { label: 'Add Expense', action: () => trigger('open-expense-modal', '/admin-shubhaminfinity/personal') },
+      { label: 'Add Debt', action: () => trigger('open-debt-modal', '/admin-shubhaminfinity/personal') },
     ];
-  } else if (location.pathname === '/admin-730If1Q5/business') {
+  } else if (location.pathname === '/admin-shubhaminfinity/business') {
     fabActions = [
-      { label: 'Add Lead', action: () => trigger('open-lead-modal', '/admin-730If1Q5/business') },
-      { label: 'Add Client', action: () => trigger('open-client-modal', '/admin-730If1Q5/business') },
+      { label: 'Add Lead', action: () => trigger('open-lead-modal', '/admin-shubhaminfinity/business') },
+      { label: 'Add Client', action: () => trigger('open-client-modal', '/admin-shubhaminfinity/business') },
 
-      { label: 'Log Payment', action: () => trigger('open-payment-modal', '/admin-730If1Q5/business') },
-      { label: 'Add Expense', action: () => trigger('open-business-expense-modal', '/admin-730If1Q5/business') },
+      { label: 'Log Payment', action: () => trigger('open-payment-modal', '/admin-shubhaminfinity/business') },
+      { label: 'Add Expense', action: () => trigger('open-business-expense-modal', '/admin-shubhaminfinity/business') },
     ];
-  } else if (location.pathname === '/admin-730If1Q5/dashboard') {
+  } else if (location.pathname === '/admin-shubhaminfinity/dashboard') {
     fabActions = [
-      { label: 'Add Task', action: () => trigger('open-task-modal', '/admin-730If1Q5/tasks') },
-      { label: 'Add Expense', action: () => trigger('open-expense-modal', '/admin-730If1Q5/personal') },
-      { label: 'Add Lead', action: () => trigger('open-lead-modal', '/admin-730If1Q5/business') },
+      { label: 'Add Task', action: () => trigger('open-task-modal', '/admin-shubhaminfinity/tasks') },
+      { label: 'Add Expense', action: () => trigger('open-expense-modal', '/admin-shubhaminfinity/personal') },
+      { label: 'Add Lead', action: () => trigger('open-lead-modal', '/admin-shubhaminfinity/business') },
     ];
   }
 
@@ -126,7 +126,7 @@ export function Layout() {
                 <button onClick={handleLogout} className="w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:text-red-500 hover:bg-gray-50"><LogOut size={18} /></button>
               </div>
               <button
-                onClick={() => navigate('/admin-730If1Q5/profile')}
+                onClick={() => navigate('/admin-shubhaminfinity/profile')}
                 className="bg-white rounded-full p-1 flex items-center pr-4 shadow-sm border border-gray-100 hover:border-orange-500 transition-colors cursor-pointer"
               >
                 {user?.user_metadata?.avatar_url ? (

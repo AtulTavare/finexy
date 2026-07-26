@@ -17,7 +17,7 @@ export function AuthGuard() {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/admin-shubhaminfinity/login" replace />;
   }
 
   if (user.user_metadata?.role === 'client') {

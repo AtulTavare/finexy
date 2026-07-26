@@ -37,8 +37,8 @@ createRoot(document.getElementById('root')!).render(
         <Routes>
           <Route path="/login" element={<ClientLogin />} />
           <Route path="/client/login" element={<ClientLogin />} />
-          <Route path="/admin-730If1Q5/login" element={<Login />} />
-          <Route path="/admin-730If1Q5" element={<AuthGuard />}>
+          <Route path="/admin-shubhaminfinity/login" element={<Login />} />
+          <Route path="/admin-shubhaminfinity" element={<AuthGuard />}>
             <Route element={<DataProvider> <Layout /> </DataProvider>}>
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />

@@ -117,7 +117,7 @@ export default function ProjectDetail() {
     return (
       <div className="flex flex-col items-center justify-center py-20 space-y-4">
         <h2 className="text-xl font-bold text-gray-900">Project not found</h2>
-        <Button onClick={() => navigate('/admin-730If1Q5/projects')}>Back to Projects</Button>
+        <Button onClick={() => navigate('/admin-shubhaminfinity/projects')}>Back to Projects</Button>
       </div>
     );
   }
@@ -136,7 +136,7 @@ export default function ProjectDetail() {
 
   const handleDelete = () => {
     deleteProject(project.id);
-    navigate('/admin-730If1Q5/projects', { replace: true });
+    navigate('/admin-shubhaminfinity/projects', { replace: true });
   };
 
   const startEditOverview = () => {
@@ -232,7 +232,7 @@ export default function ProjectDetail() {
 
   return (
     <div className="flex flex-col space-y-6 max-w-4xl mx-auto">
-      <button onClick={() => navigate('/admin-730If1Q5/projects')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 w-fit">
+      <button onClick={() => navigate('/admin-shubhaminfinity/projects')} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 w-fit">
         <ArrowLeft size={16} /> Back to Projects
       </button>
 
