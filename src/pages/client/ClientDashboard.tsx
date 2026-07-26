@@ -2,16 +2,16 @@ import { useNavigate } from 'react-router-dom';
 import { useClientData } from '../../store/ClientDataContext';
 import { Card, Badge } from '../../components/ui';
 import { formatCurrency } from '../../lib/utils';
-import { format, differenceInMonths, startOfMonth } from 'date-fns';
+import { format, differenceInMonths, startOfMonth, isSameDay, parseISO } from 'date-fns';
 import {
   FolderKanban, FileText, CreditCard, ArrowUpRight, Calendar,
-  CircleDashed, CircleDot, CheckCircle2, ChevronRight
+  CircleDashed, CircleDot, CheckCircle2, ChevronRight, Bell
 } from 'lucide-react';
 import {
   PieChart, Pie, Cell, ResponsiveContainer,
   BarChart, Bar, XAxis, Tooltip, Legend,
 } from 'recharts';
-import type { ServicePricing, BusinessPayment, Milestone } from '../../types';
+import type { ServicePricing, BusinessPayment, Milestone, Installment } from '../../types';
 
 const MILESTONE_COLORS = { Completed: '#10b981', 'In Progress': '#f97316', Pending: '#d1d5db' };
 
@@ -85,7 +85,7 @@ function monthlyPaymentsData(payments: BusinessPayment[]) {
 
 export default function ClientDashboard() {
   const navigate = useNavigate();
-  const { client, projects, businessPayments, documents, loading } = useClientData();
+  const { client, projects, businessPayments, documents, meetings, installments, loading } = useClientData();
 
   if (loading) {
     return <div className="text-gray-400 italic">Loading your dashboard...</div>;
@@ -118,6 +118,21 @@ export default function ClientDashboard() {
   }
 
   const paymentChartData = monthlyPaymentsData(businessPayments);
+
+  const now = new Date();
+  const upcomingMeetings = meetings
+    .filter(m => parseISO(m.date) >= now)
+    .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime())
+    .slice(0, 3);
+  const todayMeetings = meetings.filter(m => isSameDay(parseISO(m.date), now));
+  const pendingInstallments = installments
+    .filter(i => i.status === 'pending' && new Date(i.dueDate) >= now)
+    .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+    .slice(0, 5);
+  const overdueInstallments = installments.filter(i => {
+    const isOverdue = i.status === 'pending' && new Date(i.dueDate) < now;
+    return isOverdue;
+  });
 
   return (
     <div className="space-y-6">
@@ -488,6 +503,80 @@ export default function ClientDashboard() {
               )}
             </Card>
           </div>
+
+          {(todayMeetings.length > 0 || upcomingMeetings.length > 0) && (
+            <Card className="p-4 md:p-5 bg-white border-l-4 border-orange-400">
+              <div className="flex items-center gap-2 mb-3">
+                <Bell size={16} className="text-orange-500" />
+                <h2 className="text-sm font-semibold text-gray-900">Upcoming Meetings</h2>
+              </div>
+              <div className="space-y-2">
+                {todayMeetings.map(m => (
+                  <div key={m.id} className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-orange-500 animate-pulse shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-gray-900">{m.title}</span>
+                      <span className="text-xs text-gray-500 ml-2">Today at {m.time}</span>
+                      {m.reason && <span className="text-xs text-gray-400 ml-2">— {m.reason}</span>}
+                    </div>
+                  </div>
+                ))}
+                {upcomingMeetings.filter(m => !todayMeetings.some(t => t.id === m.id)).map(m => (
+                  <div key={m.id} className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-orange-300 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-gray-900">{m.title}</span>
+                      <span className="text-xs text-gray-500 ml-2">{format(parseISO(m.date), 'MMM d')} at {m.time}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {(pendingInstallments.length > 0 || overdueInstallments.length > 0) && (
+            <Card className="p-4 md:p-5 bg-white">
+              <h2 className="text-sm font-semibold text-gray-900 mb-3">Upcoming Installments</h2>
+              <div className="space-y-2">
+                {overdueInstallments.map(inst => {
+                  const project = projects.find(p => p.id === inst.projectId);
+                  return (
+                    <div key={inst.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                        <div className="min-w-0">
+                          <span className="text-xs font-medium text-gray-900 truncate">{inst.serviceName}</span>
+                          <span className="text-[10px] text-gray-500 ml-1">{project?.title}</span>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0 ml-2">
+                        <div className="text-xs tabular font-semibold text-red-600">{formatCurrency(inst.amount)}</div>
+                        <div className="text-[9px] text-red-500">Overdue</div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {pendingInstallments.map(inst => {
+                  const project = projects.find(p => p.id === inst.projectId);
+                  return (
+                    <div key={inst.id} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div className="w-2 h-2 rounded-full bg-gray-300 shrink-0" />
+                        <div className="min-w-0">
+                          <span className="text-xs font-medium text-gray-900 truncate">{inst.serviceName}</span>
+                          <span className="text-[10px] text-gray-500 ml-1">{project?.title}</span>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0 ml-2">
+                        <div className="text-xs tabular font-semibold text-gray-900">{formatCurrency(inst.amount)}</div>
+                        <div className="text-[9px] text-gray-400">Due {format(new Date(inst.dueDate), 'MMM d')}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
 
           <Card className="p-4 md:p-5 bg-white">
             <h2 className="text-sm font-semibold text-gray-900 mb-3">Quick Links</h2>

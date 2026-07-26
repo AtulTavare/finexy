@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FolderKanban, FileText, CreditCard, Info, Scale, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, FileText, CreditCard, Info, Scale, Calendar, LogOut, Menu, X } from 'lucide-react';
 import { useAuth } from '../store/AuthContext';
 import { ConfirmDialog } from './ui';
 
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { path: '/client/payments', label: 'Payments', icon: CreditCard },
   { path: '/client/about', label: 'About Us', icon: Info },
   { path: '/client/terms', label: 'Terms', icon: Scale },
+  { path: '/client/calendar', label: 'Calendar', icon: Calendar },
 ];
 
 export default function ClientLayout() {

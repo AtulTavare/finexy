@@ -2,9 +2,9 @@ import { useNavigate } from 'react-router-dom';
 import { useClientData } from '../../store/ClientDataContext';
 import { Card, Badge } from '../../components/ui';
 import { formatCurrency } from '../../lib/utils';
-import { format, differenceInMonths } from 'date-fns';
+import { format, differenceInMonths, addMonths } from 'date-fns';
 import { CircleDot } from 'lucide-react';
-import type { Milestone, ServicePricing, BusinessPayment } from '../../types';
+import type { Milestone, ServicePricing, BusinessPayment, Installment } from '../../types';
 
 function getServiceCurrentMonthDue(
   svc: ServicePricing,
@@ -41,6 +41,24 @@ function getServiceCurrentMonthDue(
   };
 }
 
+function getServiceNextMonthDue(
+  svc: ServicePricing,
+  payments: BusinessPayment[],
+  projectId: string,
+): number {
+  if (svc.billing !== 'monthly') return 0;
+  const now = new Date();
+  if (new Date(svc.startDate) > addMonths(now, 1)) return 0;
+  const nextMonthKey = format(addMonths(now, 1), 'yyyy-MM');
+  const paidNext = payments.some(p => {
+    if (p.projectId !== projectId || p.serviceName !== svc.name) return false;
+    return format(new Date(p.date), 'yyyy-MM') === nextMonthKey;
+  });
+  if (paidNext) return 0;
+  if (svc.endDate && new Date(svc.endDate) < addMonths(now, 1)) return 0;
+  return svc.price;
+}
+
 function currentMilestone(milestones: Milestone[]): Milestone | null {
   const ip = milestones.find(m => m.status === 'In Progress');
   if (ip) return ip;
@@ -49,7 +67,7 @@ function currentMilestone(milestones: Milestone[]): Milestone | null {
 
 export default function ClientProjects() {
   const navigate = useNavigate();
-  const { projects, businessPayments } = useClientData();
+  const { projects, businessPayments, installments } = useClientData();
 
   if (projects.length === 0) {
     return (
@@ -121,6 +139,7 @@ export default function ClientProjects() {
               <div className="space-y-2">
                 {(p.servicePricing || []).map(svc => {
                   const r = getServiceCurrentMonthDue(svc, businessPayments, p.id);
+                  const nextDue = getServiceNextMonthDue(svc, businessPayments, p.id);
                   return (
                     <div key={svc.name}>
                       <div className="flex justify-between text-xs mb-0.5">
@@ -130,6 +149,9 @@ export default function ClientProjects() {
                       <div className="flex justify-between text-[10px]">
                         <span className={r.currentMonthDue === 0 ? 'text-emerald-600' : 'text-orange-600'}>
                           {r.currentMonthDue === 0 ? '✓ This month paid' : `${formatCurrency(r.currentMonthDue)} due`}
+                        </span>
+                        <span className="text-gray-400">
+                          {nextDue > 0 && r.currentMonthDue === 0 ? `${formatCurrency(nextDue)} upcoming` : ''}
                         </span>
                         {r.overdue > r.currentMonthDue && (
                           <span className="text-red-500">+{formatCurrency(r.overdue - r.currentMonthDue)} overdue</span>
@@ -165,6 +187,24 @@ export default function ClientProjects() {
                   </div>
                 )}
               </div>
+              {(() => {
+                const projectInsts = installments.filter(i => i.projectId === p.id && i.status === 'pending');
+                if (projectInsts.length === 0) return null;
+                return (
+                  <div className="mt-2 pt-2 border-t border-gray-50">
+                    <div className="text-[9px] text-gray-500 font-medium mb-1">Scheduled Installments</div>
+                    {projectInsts.slice(0, 2).map(inst => (
+                      <div key={inst.id} className="flex justify-between text-[10px] py-0.5">
+                        <span className="text-gray-600">{inst.serviceName} — Due {format(new Date(inst.dueDate), 'MMM d')}</span>
+                        <span className="tabular font-medium text-gray-900">{formatCurrency(inst.amount)}</span>
+                      </div>
+                    ))}
+                    {projectInsts.length > 2 && (
+                      <div className="text-[9px] text-orange-600 font-medium">+{projectInsts.length - 2} more installments</div>
+                    )}
+                  </div>
+                );
+              })()}
             </Card>
           );
         })}

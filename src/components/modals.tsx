@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Modal, Button, Input, Select, Label, DatePicker } from './ui';
-import { Brand, Client, BusinessPayment, BusinessExpense, Project, ServicePricing } from '../types';
+import { Brand, Client, BusinessPayment, BusinessExpense, Project, ServicePricing, Installment } from '../types';
 import { format } from 'date-fns';
 
 const SERVICES_OFFERED = [
@@ -28,9 +28,10 @@ interface PaymentModalProps {
   payments: BusinessPayment[];
   projects?: Project[];
   editItem?: BusinessPayment | null;
+  onSaveInstallment?: (item: Omit<Installment, 'id' | 'createdAt'>) => void;
 }
 
-export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSaveOutgoing, onUpdateOutgoing, clients, payments, projects, editItem }: PaymentModalProps) {
+export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming, onSaveOutgoing, onUpdateOutgoing, clients, payments, projects, editItem, onSaveInstallment }: PaymentModalProps) {
   const [type, setType] = useState<'incoming' | 'outgoing'>('incoming');
 
   const [projectId, setProjectId] = useState('');
@@ -38,6 +39,8 @@ export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date());
   const [invoiceReference, setInvoiceReference] = useState('');
+  const [markAsInstallment, setMarkAsInstallment] = useState(false);
+  const [dueDate, setDueDate] = useState(new Date());
 
   const [brand, setBrand] = useState<Brand>('Infinity Innovations');
   const [category, setCategory] = useState<BusinessExpense['category']>('Tools');
@@ -54,9 +57,11 @@ export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming
       setAmount(editItem.amount.toString());
       setDate(new Date(editItem.date));
       setInvoiceReference(editItem.invoiceReference);
+      setMarkAsInstallment(false);
+      setDueDate(new Date());
     } else {
       setType('incoming');
-      setProjectId(''); setServiceName(''); setAmount(''); setDate(new Date()); setInvoiceReference(''); setBrand('Infinity Innovations'); setCategory('Tools');
+      setProjectId(''); setServiceName(''); setAmount(''); setDate(new Date()); setInvoiceReference(''); setMarkAsInstallment(false); setDueDate(new Date()); setBrand('Infinity Innovations'); setCategory('Tools');
     }
   }, [editItem, isOpen]);
 
@@ -75,6 +80,15 @@ export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming
         if (!projectId || !serviceName) return;
         const client = clients.find((c: any) => c.id === clientId);
         onSaveIncoming({ clientId, projectId, serviceName, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd'), invoiceReference, brand: client?.brand || 'Infinity Innovations' });
+        if (markAsInstallment && onSaveInstallment) {
+          onSaveInstallment({
+            clientId, projectId, serviceName, amount: parseFloat(amount),
+            dueDate: format(dueDate, 'yyyy-MM-dd'),
+            paidDate: format(date, 'yyyy-MM-dd'),
+            status: 'paid',
+            invoiceReference,
+          });
+        }
       }
     } else {
       onSaveOutgoing({ brand, category, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd') });
@@ -125,6 +139,18 @@ export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming
             <div><Label>Amount</Label><Input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} required /></div>
             <div><Label>Date</Label><DatePicker value={date} onChange={setDate} /></div>
             <div><Label>Invoice Reference</Label><Input value={invoiceReference} onChange={e => setInvoiceReference(e.target.value)} /></div>
+            {!editItem && (
+              <div className="flex items-center gap-2 pt-1">
+                <input type="checkbox" id="markInstallment" checked={markAsInstallment} onChange={e => setMarkAsInstallment(e.target.checked)} className="rounded border-gray-200 text-orange-500 focus:ring-orange-400" />
+                <label htmlFor="markInstallment" className="text-xs font-medium text-gray-700 cursor-pointer">Mark as Installment</label>
+              </div>
+            )}
+            {!editItem && markAsInstallment && (
+              <div>
+                <Label>Due Date</Label>
+                <DatePicker value={dueDate} onChange={setDueDate} />
+              </div>
+            )}
           </>
         ) : (
           <>

@@ -2,7 +2,8 @@ import { useClientData } from '../../store/ClientDataContext';
 import { Card, Badge } from '../../components/ui';
 import { formatCurrency } from '../../lib/utils';
 import { format, differenceInMonths } from 'date-fns';
-import type { ServicePricing, BusinessPayment } from '../../types';
+import { CalendarDays } from 'lucide-react';
+import type { ServicePricing, BusinessPayment, Installment } from '../../types';
 
 function getServiceCurrentMonthDue(
   svc: ServicePricing,
@@ -40,7 +41,7 @@ function getServiceCurrentMonthDue(
 }
 
 export default function ClientPayments() {
-  const { projects, businessPayments, loading } = useClientData();
+  const { projects, businessPayments, installments, loading } = useClientData();
 
   const total = businessPayments.reduce((s, p) => s + p.amount, 0);
 
@@ -109,6 +110,49 @@ export default function ClientPayments() {
               })
             )}
           </div>
+        </Card>
+      )}
+
+      {installments.length > 0 && (
+        <Card className="p-4 md:p-5 bg-white">
+          <div className="flex items-center gap-2 mb-3">
+            <CalendarDays size={16} className="text-gray-500" />
+            <h2 className="text-sm font-semibold text-gray-900">Payment Schedule</h2>
+          </div>
+          <div className="space-y-2">
+            {[...installments]
+              .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+              .map(inst => {
+                const isOverdue = inst.status === 'pending' && new Date(inst.dueDate) < new Date();
+                const status = isOverdue ? 'overdue' : inst.status;
+                const project = projects.find(p => p.id === inst.projectId);
+                return (
+                  <div key={inst.id} className="flex items-center justify-between py-2 border-b border-gray-50">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-2 h-2 rounded-full shrink-0 ${status === 'paid' ? 'bg-emerald-400' : status === 'overdue' ? 'bg-red-400' : 'bg-gray-300'}`} />
+                      <div className="min-w-0">
+                        <span className="text-sm font-medium text-gray-900">{inst.serviceName}</span>
+                        <span className="text-xs text-gray-500 ml-1">{project?.title}</span>
+                        <div className="text-[10px] text-gray-400">
+                          Due {format(new Date(inst.dueDate), 'MMM d, yyyy')}
+                          {inst.paidDate && ` — Paid ${format(new Date(inst.paidDate), 'MMM d, yyyy')}`}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      <span className="text-sm tabular font-semibold text-gray-900">{formatCurrency(inst.amount)}</span>
+                      <Badge variant={status === 'paid' ? 'success' : status === 'overdue' ? 'error' : 'secondary'}>{status}</Badge>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+          <button
+            onClick={() => window.open('/client/calendar', '_self')}
+            className="mt-3 text-xs text-orange-600 font-medium flex items-center gap-1 hover:underline"
+          >
+            <CalendarDays size={12} /> View in Calendar
+          </button>
         </Card>
       )}
 

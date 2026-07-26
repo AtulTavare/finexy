@@ -123,6 +123,21 @@ export interface Document {
   userId?: string;
 }
 
+export interface Installment {
+  id: string;
+  clientId: string;
+  projectId: string;
+  serviceName: string;
+  amount: number;
+  dueDate: string;
+  paidDate?: string;
+  status: 'pending' | 'paid' | 'overdue';
+  invoiceReference?: string;
+  note?: string;
+  createdAt: string;
+  userId?: string;
+}
+
 export interface Milestone {
   title: string;
   description?: string;
@@ -179,4 +194,5 @@ export interface PulseData {
   projects: Project[];
   meetings: Meeting[];
   documents: Document[];
+  installments: Installment[];
 }

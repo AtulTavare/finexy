@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Project, BusinessPayment, Document, Meeting } from '../types';
+import { Project, BusinessPayment, Document, Meeting, Installment } from '../types';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { toCamelCase, toSnakeCase, generateId } from '../lib/utils';
@@ -25,6 +25,7 @@ interface ClientDataContextType {
   businessPayments: BusinessPayment[];
   documents: Document[];
   meetings: Meeting[];
+  installments: Installment[];
   loading: boolean;
   addDocument: (item: Omit<Document, 'id' | 'createdAt'>) => void;
   deleteDocument: (id: string) => void;
@@ -36,6 +37,7 @@ const empty: ClientDataContextType = {
   businessPayments: [],
   documents: [],
   meetings: [],
+  installments: [],
   loading: true,
   addDocument: () => {},
   deleteDocument: () => {},
@@ -50,6 +52,7 @@ export function ClientDataProvider({ children }: { children: React.ReactNode }) 
   const [businessPayments, setBusinessPayments] = useState<BusinessPayment[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [installments, setInstallments] = useState<Installment[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -79,17 +82,19 @@ export function ClientDataProvider({ children }: { children: React.ReactNode }) 
         };
         setClient(clientInfo);
 
-        const [projRes, payRes, docRes, meetRes] = await Promise.all([
+        const [projRes, payRes, docRes, meetRes, instRes] = await Promise.all([
           supabase.from('projects').select('*').eq('client_id', cu.client_id).order('created_at', { ascending: false }),
           supabase.from('business_payments').select('*').eq('client_id', cu.client_id).order('date', { ascending: false }),
           supabase.from('client_documents').select('*').eq('client_id', cu.client_id).order('created_at', { ascending: false }),
           supabase.from('meetings').select('*').eq('client_id', cu.client_id).order('date', { ascending: false }),
+          supabase.from('installments').select('*').eq('client_id', cu.client_id).order('due_date', { ascending: true }),
         ]);
 
         setProjects((projRes.data || []).map(r => toCamelCase(r)) as any);
         setBusinessPayments((payRes.data || []).map(r => toCamelCase(r)) as any);
         setDocuments((docRes.data || []).map(r => toCamelCase(r)) as any);
         setMeetings((meetRes.data || []).map(r => toCamelCase(r)) as any);
+        setInstallments((instRes.data || []).map(r => toCamelCase(r)) as any);
       } catch (e) {
         console.error('Failed to load client data', e);
       } finally {
@@ -127,7 +132,7 @@ export function ClientDataProvider({ children }: { children: React.ReactNode }) 
   };
 
   return (
-    <ClientDataContext.Provider value={{ client, projects, businessPayments, documents, meetings, loading, addDocument, deleteDocument }}>
+    <ClientDataContext.Provider value={{ client, projects, businessPayments, documents, meetings, installments, loading, addDocument, deleteDocument }}>
       {children}
     </ClientDataContext.Provider>
   );

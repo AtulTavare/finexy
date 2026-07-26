@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useData } from '../store/DataContext';
 import { Card, Button, Input, Select, Label, Modal, Badge, DatePicker, ConfirmDialog } from '../components/ui';
 import { formatCurrency } from '../lib/utils';
-import { Brand, Lead, Client, BusinessPayment, BusinessExpense, Project } from '../types';
+import { Brand, Lead, Client, BusinessPayment, BusinessExpense, Project, Installment } from '../types';
 import { format } from 'date-fns';
 import { Trash2 } from 'lucide-react';
 import { supabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase';
@@ -14,13 +14,13 @@ const BRANDS: (Brand | 'All')[] = ['All', 'Infinity Innovations'];
 
 export default function Business() {
   const [activeBrand, setActiveBrand] = useState<Brand | 'All'>('All');
-  const [activeTab, setActiveTab] = useState<'pipeline' | 'clients' | 'payments' | 'expenses'>('pipeline');
+  const [activeTab, setActiveTab] = useState<'pipeline' | 'clients' | 'payments' | 'expenses' | 'installments'>('pipeline');
   const { 
     leads, addLead, updateLead, deleteLead,
     clients, addClient, updateClient, deleteClient,
     businessPayments, addBusinessPayment, updateBusinessPayment, deleteBusinessPayment,
     businessExpenses, addBusinessExpense, updateBusinessExpense, deleteBusinessExpense,
-    projects
+    projects, installments, addInstallment, updateInstallment, deleteInstallment,
   } = useData();
   const { user } = useAuth();
 
@@ -32,6 +32,12 @@ export default function Business() {
   const [editingPayment, setEditingPayment] = useState<BusinessPayment | null>(null);
   const [editingExpense, setEditingExpense] = useState<BusinessExpense | null>(null);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [showInstallmentModal, setShowInstallmentModal] = useState(false);
+  const [editingInstallment, setEditingInstallment] = useState<Installment | null>(null);
+  const [showPaidInstallmentModal, setShowPaidInstallmentModal] = useState<Installment | null>(null);
+  const [paidAmount, setPaidAmount] = useState('');
+  const [paidDate, setPaidDate] = useState(new Date());
+  const [paidInvoiceRef, setPaidInvoiceRef] = useState('');
 
   const location = useLocation();
 
@@ -50,6 +56,9 @@ export default function Business() {
       } else if (modal === 'open-client-modal') {
         setActiveTab('clients');
         setShowClientModal(true);
+      } else if (modal === 'open-installment-modal') {
+        setActiveTab('installments');
+        setShowInstallmentModal(true);
       }
       window.history.replaceState({}, document.title);
     }
@@ -59,6 +68,7 @@ export default function Business() {
   const filteredClients = clients.filter(c => activeBrand === 'All' || c.brand === activeBrand);
   const filteredPayments = businessPayments.filter(p => activeBrand === 'All' || p.brand === activeBrand).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const filteredExpenses = businessExpenses.filter(e => activeBrand === 'All' || e.brand === activeBrand).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const filteredInstallments = installments.filter(i => activeBrand === 'All' || clients.find(c => c.id === i.clientId)?.brand === activeBrand);
 
   React.useEffect(() => {
     const onLead = () => { setActiveTab('pipeline'); setShowLeadModal(true); };
@@ -89,6 +99,7 @@ export default function Business() {
           {activeTab === 'clients' && <Button className="w-full md:w-auto" onClick={() => setShowClientModal(true)}>+ Add Client</Button>}
           {activeTab === 'payments' && <Button className="w-full md:w-auto" onClick={() => setShowPaymentModal(true)}>+ Log Payment</Button>}
           {activeTab === 'expenses' && <Button className="w-full md:w-auto" onClick={() => setShowExpenseModal(true)}>+ Add Expense</Button>}
+          {activeTab === 'installments' && <Button className="w-full md:w-auto" onClick={() => setShowInstallmentModal(true)}>+ Create Installment</Button>}
         </div>
       </div>
 
@@ -99,22 +110,22 @@ export default function Business() {
           onChange={e => setActiveTab(e.target.value as any)}
           className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all appearance-none cursor-pointer"
         >
-          {(['pipeline', 'clients', 'payments', 'expenses'] as const).map(tab => (
+          {(['pipeline', 'clients', 'payments', 'expenses', 'installments'] as const).map(tab => (
             <option key={tab} value={tab}>{tab.charAt(0).toUpperCase() + tab.slice(1)}</option>
           ))}
         </select>
       </div>
       {/* Desktop: pill tabs */}
       <div className="hidden md:flex bg-white rounded-full p-1 shadow-sm border border-gray-100 flex-wrap mb-2 shrink-0">
-        {(['pipeline', 'clients', 'payments', 'expenses'] as const).map(tab => (
-          <button 
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-5 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${activeTab === tab ? 'bg-[#18181b] text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </button>
-        ))}
+          {(['pipeline', 'clients', 'payments', 'expenses', 'installments'] as const).map(tab => (
+            <button 
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-5 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${activeTab === tab ? 'bg-[#18181b] text-white' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'}`}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            </button>
+          ))}
       </div>
 
       <div>
@@ -122,12 +133,71 @@ export default function Business() {
         {activeTab === 'clients' && <ClientsView clients={filteredClients} projects={projects} onEdit={(c) => { setEditingClient(c); setShowClientModal(true); }} />}
         {activeTab === 'payments' && <PaymentsView payments={filteredPayments} clients={clients} projects={projects} deletePayment={deleteBusinessPayment} onEdit={(p) => { setEditingPayment(p); setShowPaymentModal(true); }} />}
         {activeTab === 'expenses' && <ExpensesView expenses={filteredExpenses} deleteExpense={deleteBusinessExpense} onEdit={(e) => { setEditingExpense(e); setShowExpenseModal(true); }} />}
+        {activeTab === 'installments' && <InstallmentsView installments={filteredInstallments} clients={clients} projects={projects} onMarkPaid={(inst) => { setShowPaidInstallmentModal(inst); setPaidAmount(inst.amount.toString()); setPaidDate(new Date()); setPaidInvoiceRef(''); }} onDelete={deleteInstallment} />}
       </div>
 
       <LeadModal isOpen={showLeadModal} onClose={() => { setShowLeadModal(false); setEditingLead(null); }} onSave={addLead} onUpdate={updateLead} editItem={editingLead} />
-      <PaymentModal isOpen={showPaymentModal} onClose={() => { setShowPaymentModal(false); setEditingPayment(null); }} onSaveIncoming={addBusinessPayment} onUpdateIncoming={updateBusinessPayment} onSaveOutgoing={addBusinessExpense} onUpdateOutgoing={updateBusinessExpense} clients={filteredClients} payments={businessPayments} projects={projects} editItem={editingPayment} />
+      <PaymentModal isOpen={showPaymentModal} onClose={() => { setShowPaymentModal(false); setEditingPayment(null); }} onSaveIncoming={addBusinessPayment} onUpdateIncoming={updateBusinessPayment} onSaveOutgoing={addBusinessExpense} onUpdateOutgoing={updateBusinessExpense} clients={filteredClients} payments={businessPayments} projects={projects} editItem={editingPayment} onSaveInstallment={addInstallment} />
       <BusinessExpenseModal isOpen={showExpenseModal} onClose={() => { setShowExpenseModal(false); setEditingExpense(null); }} onSave={addBusinessExpense} onUpdate={updateBusinessExpense} editItem={editingExpense} />
       <ClientModal isOpen={showClientModal} onClose={() => { setShowClientModal(false); setEditingClient(null); }} onSave={addClient} onUpdate={updateClient} editItem={editingClient} />
+
+      {/* Create Installment Modal */}
+      <Modal isOpen={showInstallmentModal} onClose={() => setShowInstallmentModal(false)} title="Create Installment">
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          const form = e.target as HTMLFormElement;
+          const f = new FormData(form);
+          const cId = f.get('cli') as string;
+          const pId = f.get('proj') as string;
+          const sName = f.get('svc') as string;
+          const amt = parseFloat(f.get('amt') as string);
+          const dDate = f.get('due') as string;
+          if (!cId || !pId || !sName || !amt || !dDate) return;
+          addInstallment({
+            clientId: cId, projectId: pId, serviceName: sName, amount: amt,
+            dueDate: dDate, status: 'pending', note: (f.get('note') as string) || undefined,
+          });
+          setShowInstallmentModal(false);
+        }} className="space-y-4">
+          <div><Label>Client</Label><select name="cli" required className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm">{[...new Set(clients.map(c => c.id))].map(id => { const c = clients.find(x => x.id === id); return <option key={id} value={id}>{c?.name}</option>; })}</select></div>
+          <div><Label>Project</Label><select name="proj" required className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm">{projects.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}</select></div>
+          <div><Label>Service</Label><select name="svc" required className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm">{(projects[0]?.servicePricing || []).map((s: any) => <option key={s.name} value={s.name}>{s.name}</option>)}</select></div>
+          <div><Label>Amount (₹)</Label><Input name="amt" type="number" step="0.01" required /></div>
+          <div><Label>Due Date</Label><Input name="due" type="date" required /></div>
+          <div><Label>Note (optional)</Label><Input name="note" /></div>
+          <Button type="submit" className="w-full">Create Installment</Button>
+        </form>
+      </Modal>
+
+      {/* Mark Installment as Paid Modal */}
+      <Modal isOpen={!!showPaidInstallmentModal} onClose={() => setShowPaidInstallmentModal(null)} title="Mark Installment as Paid">
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          if (!showPaidInstallmentModal) return;
+          const amt = parseFloat(paidAmount);
+          if (!amt) return;
+          addBusinessPayment({
+            clientId: showPaidInstallmentModal.clientId,
+            projectId: showPaidInstallmentModal.projectId,
+            serviceName: showPaidInstallmentModal.serviceName,
+            amount: amt,
+            date: format(paidDate, 'yyyy-MM-dd'),
+            invoiceReference: paidInvoiceRef || `INST-${showPaidInstallmentModal.id.slice(0, 6)}`,
+            brand: clients.find(c => c.id === showPaidInstallmentModal.clientId)?.brand || 'Infinity Innovations',
+          });
+          updateInstallment(showPaidInstallmentModal.id, {
+            status: 'paid',
+            paidDate: format(paidDate, 'yyyy-MM-dd'),
+            invoiceReference: paidInvoiceRef || undefined,
+          });
+          setShowPaidInstallmentModal(null);
+        }} className="space-y-4">
+          <div><Label>Amount (₹)</Label><Input type="number" step="0.01" value={paidAmount} onChange={e => setPaidAmount(e.target.value)} required /></div>
+          <div><Label>Payment Date</Label><DatePicker value={paidDate} onChange={setPaidDate} /></div>
+          <div><Label>Invoice Reference</Label><Input value={paidInvoiceRef} onChange={e => setPaidInvoiceRef(e.target.value)} /></div>
+          <Button type="submit" className="w-full">Save Payment</Button>
+        </form>
+      </Modal>
     </div>
   );
 }
@@ -402,6 +472,77 @@ function ExpensesView({ expenses, deleteExpense, onEdit }: ExpensesViewProps) {
         title="Delete Expense"
         message={`Are you sure you want to delete the ${deleteTarget?.name}?`}
         onConfirm={() => { if (deleteTarget) deleteExpense(deleteTarget.id); setDeleteTarget(null); }}
+        onCancel={() => setDeleteTarget(null)}
+      />
+    </Card>
+  );
+}
+
+interface InstallmentsViewProps {
+  installments: Installment[];
+  clients: Client[];
+  projects: Project[];
+  onMarkPaid: (inst: Installment) => void;
+  onDelete: (id: string) => void;
+}
+
+function InstallmentsView({ installments, clients, projects, onMarkPaid, onDelete }: InstallmentsViewProps) {
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const sorted = [...installments].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+  if (sorted.length === 0) return <div className="text-gray-900 italic">No installments created yet. Use "Mark as Installment" when logging a payment or create one directly.</div>;
+  return (
+    <Card className="p-0 bg-white overflow-x-auto">
+      <table className="w-full text-left text-sm">
+        <thead>
+          <tr className="text-xs uppercase text-gray-500 tracking-wider border-b border-gray-200">
+            <th className="p-4 md:p-6 font-semibold">Due Date</th>
+            <th className="p-4 md:p-6 font-semibold">Client</th>
+            <th className="p-4 md:p-6 font-semibold">Project</th>
+            <th className="p-4 md:p-6 font-semibold">Service</th>
+            <th className="p-4 md:p-6 font-semibold text-right">Amount</th>
+            <th className="p-4 md:p-6 font-semibold">Status</th>
+            <th className="p-4 md:p-6 font-semibold">Paid Date</th>
+            <th className="p-4 md:p-6"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map(inst => {
+            const client = clients.find(c => c.id === inst.clientId);
+            const project = projects.find(p => p.id === inst.projectId);
+            const isOverdue = inst.status === 'pending' && new Date(inst.dueDate) < new Date();
+            const status = isOverdue ? 'overdue' : inst.status;
+            return (
+              <tr key={inst.id} className="border-b border-gray-200 hover:bg-gray-50">
+                <td className="p-4 md:p-6 text-gray-900 whitespace-nowrap">{format(new Date(inst.dueDate), 'MMM d, yyyy')}</td>
+                <td className="p-4 md:p-6 text-gray-800">{client?.name || inst.clientId.slice(0, 8)}</td>
+                <td className="p-4 md:p-6 text-gray-500">{project?.title || '—'}</td>
+                <td className="p-4 md:p-6 text-gray-500">{inst.serviceName}</td>
+                <td className="p-4 md:p-6 text-right tabular font-semibold text-gray-900">{formatCurrency(inst.amount)}</td>
+                <td className="p-4 md:p-6">
+                  <Badge variant={status === 'paid' ? 'success' : status === 'overdue' ? 'error' : 'secondary'} className="capitalize">{status}</Badge>
+                </td>
+                <td className="p-4 md:p-6 text-gray-500 whitespace-nowrap">{inst.paidDate ? format(new Date(inst.paidDate), 'MMM d, yyyy') : '—'}</td>
+                <td className="p-4 md:p-6">
+                  {status === 'pending' && (
+                    <button onClick={() => onMarkPaid(inst)} className="text-xs text-emerald-600 hover:text-emerald-700 font-medium cursor-pointer">Mark Paid</button>
+                  )}
+                  {status === 'overdue' && (
+                    <button onClick={() => onMarkPaid(inst)} className="text-xs text-red-600 hover:text-red-700 font-medium cursor-pointer">Mark Paid</button>
+                  )}
+                  {status === 'paid' && (
+                    <button onClick={() => { setDeleteTarget({ id: inst.id, name: `${inst.serviceName} installment` }); }} className="text-gray-400 hover:text-red-500 p-1 cursor-pointer"><Trash2 size={14} /></button>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Delete Installment"
+        message={`Delete ${deleteTarget?.name}?`}
+        onConfirm={() => { if (deleteTarget) onDelete(deleteTarget.id); setDeleteTarget(null); }}
         onCancel={() => setDeleteTarget(null)}
       />
     </Card>

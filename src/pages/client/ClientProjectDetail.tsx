@@ -3,8 +3,8 @@ import { useClientData } from '../../store/ClientDataContext';
 import { Card, Badge } from '../../components/ui';
 import { formatCurrency } from '../../lib/utils';
 import { format, differenceInMonths } from 'date-fns';
-import { ArrowLeft, Download, CircleDot } from 'lucide-react';
-import type { Milestone, ServicePricing, BusinessPayment } from '../../types';
+import { ArrowLeft, Download, CircleDot, CalendarDays } from 'lucide-react';
+import type { Milestone, ServicePricing, BusinessPayment, Installment } from '../../types';
 
 function getServiceCurrentMonthDue(
   svc: ServicePricing,
@@ -50,7 +50,7 @@ function currentMilestone(milestones: Milestone[]): Milestone | null {
 export default function ClientProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { projects, businessPayments, documents, meetings, loading } = useClientData();
+  const { projects, businessPayments, documents, meetings, installments, loading } = useClientData();
 
   const project = projects.find(p => p.id === id);
 
@@ -91,6 +91,7 @@ export default function ClientProjectDetail() {
   const clientDocs = documents.filter(d => d.clientId === project.clientId);
   const clientMeetings = meetings.filter(m => m.clientId === project.clientId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const nextMeeting = clientMeetings.find(m => new Date(m.date) >= new Date());
+  const projectInstallments = installments.filter(i => i.projectId === project.id).sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
 
   return (
     <div className="flex flex-col space-y-6 max-w-4xl mx-auto">
@@ -353,6 +354,40 @@ export default function ClientProjectDetail() {
           </div>
         )}
       </Card>
+
+      {projectInstallments.length > 0 && (
+        <Card className="p-4 md:p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <CalendarDays size={16} className="text-gray-500" />
+            <h2 className="text-sm font-semibold text-gray-900">Installments / Payment Schedule</h2>
+          </div>
+          <div className="space-y-2">
+            {projectInstallments.map(inst => {
+              const isOverdue = inst.status === 'pending' && new Date(inst.dueDate) < new Date();
+              const status = isOverdue ? 'overdue' : inst.status;
+              return (
+                <div key={inst.id} className="flex items-center justify-between py-2 border-b border-gray-50">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${status === 'paid' ? 'bg-emerald-400' : status === 'overdue' ? 'bg-red-400' : 'bg-gray-300'}`} />
+                    <div className="min-w-0">
+                      <span className="text-sm font-medium text-gray-900">{inst.serviceName}</span>
+                      <div className="text-[10px] text-gray-400">
+                        Due {format(new Date(inst.dueDate), 'MMM d, yyyy')}
+                        {inst.paidDate && ` — Paid ${format(new Date(inst.paidDate), 'MMM d, yyyy')}`}
+                        {inst.note && <span className="ml-1">— {inst.note}</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0 ml-2">
+                    <span className="text-sm tabular font-semibold text-gray-900">{formatCurrency(inst.amount)}</span>
+                    <Badge variant={status === 'paid' ? 'success' : status === 'overdue' ? 'error' : 'secondary'}>{status}</Badge>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
       <Card className="p-4 md:p-6">
         <h2 className="text-sm font-semibold text-gray-900 mb-4">Payment History</h2>

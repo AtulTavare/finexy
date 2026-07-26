@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useData } from '../store/DataContext';
-import { Card, Button, Badge, ConfirmDialog, Input, Textarea, Select, Label, Modal } from '../components/ui';
+import { Card, Button, Badge, ConfirmDialog, Input, Textarea, Select, Label, Modal, DatePicker } from '../components/ui';
 import { ProjectModal, PaymentModal } from '../components/modals';
 import { formatCurrency, generateId } from '../lib/utils';
 import { format, differenceInMonths } from 'date-fns';
 import { ArrowLeft, Trash2, Plus, Pencil, X, Check, Upload, Download, ChevronDown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../store/AuthContext';
-import type { Milestone, ProcessStep } from '../types';
+import type { Milestone, ProcessStep, Installment } from '../types';
 
 function serviceTotalValue(svc: { price: number; billing: string; startDate: string; endDate?: string }): number {
   if (svc.billing === 'one-time') return svc.price;
@@ -76,11 +76,12 @@ export default function ProjectDetail() {
   const { user } = useAuth();
   const {
     projects, addProject, updateProject, deleteProject,
-    clients, businessPayments, meetings, documents,
+    clients, businessPayments, meetings, documents, installments,
     addBusinessPayment, updateBusinessPayment, deleteBusinessPayment,
     businessExpenses, addBusinessExpense, updateBusinessExpense, deleteBusinessExpense,
     addMeeting, updateMeeting, deleteMeeting,
     addDocument, deleteDocument,
+    addInstallment, updateInstallment, deleteInstallment,
   } = useData();
 
   const project = projects.find(p => p.id === id);
@@ -90,6 +91,11 @@ export default function ProjectDetail() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [deleteMeetingTarget, setDeleteMeetingTarget] = useState<{ id: string; title: string } | null>(null);
+  const [showInstallmentCreate, setShowInstallmentCreate] = useState(false);
+  const [showInstallmentPaid, setShowInstallmentPaid] = useState<Installment | null>(null);
+  const [instPaidAmount, setInstPaidAmount] = useState('');
+  const [instPaidDate, setInstPaidDate] = useState(new Date());
+  const [instPaidRef, setInstPaidRef] = useState('');
 
   const [editOverview, setEditOverview] = useState(false);
   const [overviewVal, setOverviewVal] = useState('');
@@ -126,6 +132,7 @@ export default function ProjectDetail() {
   const nextMeeting = clientMeetings.find(m => new Date(m.date) >= new Date());
   const pastMeetings = clientMeetings.filter(m => new Date(m.date) < new Date());
   const clientDocs = documents.filter(d => d.clientId === project.clientId);
+  const projectInstallments = installments.filter(i => i.projectId === project.id).sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
 
   const handleDelete = () => {
     deleteProject(project.id);
@@ -495,6 +502,48 @@ export default function ProjectDetail() {
 
       <Card className="p-4 md:p-6">
         <div className="flex justify-between items-center mb-4">
+          <h2 className="text-sm font-semibold text-gray-900">Installments / Payment Schedule</h2>
+          <Button variant="secondary" className="text-xs px-3 py-1.5 min-h-[36px]" onClick={() => setShowInstallmentCreate(true)}>
+            <Plus size={14} className="mr-1" /> Add Installment
+          </Button>
+        </div>
+        {projectInstallments.length === 0 ? (
+          <p className="text-sm text-gray-400 italic">No installments scheduled for this project.</p>
+        ) : (
+          <div className="space-y-2">
+            {projectInstallments.map(inst => {
+              const isOverdue = inst.status === 'pending' && new Date(inst.dueDate) < new Date();
+              const status = isOverdue ? 'overdue' : inst.status;
+              return (
+                <div key={inst.id} className="flex items-center justify-between py-2 border-b border-gray-50">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${status === 'paid' ? 'bg-emerald-400' : status === 'overdue' ? 'bg-red-400' : 'bg-gray-300'}`} />
+                    <div>
+                      <span className="text-sm font-medium text-gray-900">{inst.serviceName}</span>
+                      <span className="text-xs text-gray-500 ml-2">Due {format(new Date(inst.dueDate), 'MMM d, yyyy')}</span>
+                      {inst.paidDate && <span className="text-xs text-gray-400 ml-2">Paid {format(new Date(inst.paidDate), 'MMM d, yyyy')}</span>}
+                      {inst.note && <span className="text-xs text-gray-400 ml-2">— {inst.note}</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0 ml-2">
+                    <span className="text-sm tabular font-semibold text-gray-900">{formatCurrency(inst.amount)}</span>
+                    <Badge variant={status === 'paid' ? 'success' : status === 'overdue' ? 'error' : 'secondary'}>{status}</Badge>
+                    {status !== 'paid' && (
+                      <button onClick={() => { setShowInstallmentPaid(inst); setInstPaidAmount(inst.amount.toString()); setInstPaidDate(new Date()); setInstPaidRef(''); }} className="text-xs text-emerald-600 hover:text-emerald-700 font-medium cursor-pointer">Mark Paid</button>
+                    )}
+                    {status === 'paid' && (
+                      <button onClick={() => deleteInstallment(inst.id)} className="text-gray-400 hover:text-red-500 cursor-pointer"><Trash2 size={14} /></button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+
+      <Card className="p-4 md:p-6">
+        <div className="flex justify-between items-center mb-4">
           <h2 className="text-sm font-semibold text-gray-900">Documents</h2>
           <div>
             {docUploadError && <p className="text-xs text-red-500 mb-2">{docUploadError}</p>}
@@ -593,6 +642,7 @@ export default function ProjectDetail() {
         clients={client ? [client] : clients}
         payments={businessPayments}
         projects={projects}
+        onSaveInstallment={addInstallment}
       />
 
       <Modal isOpen={showMeetingModal} onClose={() => setShowMeetingModal(false)} title="Schedule Meeting">
@@ -631,6 +681,68 @@ export default function ProjectDetail() {
         onConfirm={() => { if (showDeleteDocConfirm) { deleteDocument(showDeleteDocConfirm); setShowDeleteDocConfirm(null); } }}
         onCancel={() => setShowDeleteDocConfirm(null)}
       />
+
+      <Modal isOpen={showInstallmentCreate} onClose={() => setShowInstallmentCreate(false)} title="Create Installment">
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          const f = new FormData(e.target as HTMLFormElement);
+          const svc = f.get('svc') as string;
+          const amt = parseFloat(f.get('amt') as string);
+          const due = f.get('due') as string;
+          if (!svc || !amt || !due) return;
+          addInstallment({
+            clientId: project.clientId,
+            projectId: project.id,
+            serviceName: svc,
+            amount: amt,
+            dueDate: due,
+            status: 'pending',
+            note: (f.get('note') as string) || undefined,
+          });
+          setShowInstallmentCreate(false);
+        }} className="space-y-4">
+          <div>
+            <Label>Service</Label>
+            <select name="svc" required className="w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-sm">
+              {(project.servicePricing || []).map((s: any) => <option key={s.name} value={s.name}>{s.name}</option>)}
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div><Label>Amount (₹)</Label><Input name="amt" type="number" step="0.01" required /></div>
+          <div><Label>Due Date</Label><Input name="due" type="date" required /></div>
+          <div><Label>Note (optional)</Label><Input name="note" /></div>
+          <Button type="submit" className="w-full">Create Installment</Button>
+        </form>
+      </Modal>
+
+      <Modal isOpen={!!showInstallmentPaid} onClose={() => setShowInstallmentPaid(null)} title="Mark Installment as Paid">
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          if (!showInstallmentPaid) return;
+          const amt = parseFloat(instPaidAmount);
+          if (!amt) return;
+          addBusinessPayment({
+            clientId: project.clientId,
+            projectId: project.id,
+            serviceName: showInstallmentPaid.serviceName,
+            amount: amt,
+            date: format(instPaidDate, 'yyyy-MM-dd'),
+            invoiceReference: instPaidRef || `INST-${showInstallmentPaid.id.slice(0, 6)}`,
+            brand: client?.brand || 'Infinity Innovations',
+          });
+          updateInstallment(showInstallmentPaid.id, {
+            status: 'paid',
+            paidDate: format(instPaidDate, 'yyyy-MM-dd'),
+            invoiceReference: instPaidRef || undefined,
+          });
+          setShowInstallmentPaid(null);
+        }} className="space-y-4">
+          <div><Label>Amount (₹)</Label><Input type="number" step="0.01" value={instPaidAmount} onChange={e => setInstPaidAmount(e.target.value)} required /></div>
+          <div><Label>Payment Date</Label><DatePicker value={instPaidDate} onChange={setInstPaidDate} /></div>
+          <div><Label>Invoice Reference</Label><Input value={instPaidRef} onChange={e => setInstPaidRef(e.target.value)} /></div>
+          <Button type="submit" className="w-full">Save Payment</Button>
+        </form>
+      </Modal>
     </div>
   );
 }

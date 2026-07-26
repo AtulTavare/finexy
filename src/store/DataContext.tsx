@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import {
   PulseData, PersonalIncome, PersonalExpense, PersonalDebt,
   Lead, Client, BusinessPayment, BusinessExpense,
-  Task, Project, Meeting, Document,
+  Task, Project, Meeting, Document, Installment,
 } from '../types';
 import { generateId, toCamelCase, toSnakeCase } from '../lib/utils';
 import { supabase } from '../lib/supabase';
@@ -57,6 +57,9 @@ interface DataContextType extends PulseData {
   deleteMeeting: (id: string) => void;
   addDocument: (item: Omit<Document, 'id' | 'createdAt'>) => void;
   deleteDocument: (id: string) => void;
+  addInstallment: (item: Omit<Installment, 'id' | 'createdAt'>) => void;
+  updateInstallment: (id: string, updates: Partial<Installment>) => void;
+  deleteInstallment: (id: string) => void;
 }
 
 const emptyData: PulseData = {
@@ -71,6 +74,7 @@ const emptyData: PulseData = {
   projects: [],
   meetings: [],
   documents: [],
+  installments: [],
 };
 
 const DataContext = createContext<DataContextType | null>(null);
@@ -78,7 +82,7 @@ const DataContext = createContext<DataContextType | null>(null);
 type TableName =
   | 'personal_income' | 'personal_expenses' | 'personal_debts'
   | 'leads' | 'clients' | 'business_payments'
-  | 'business_expenses' | 'tasks' | 'projects' | 'meetings' | 'client_documents';
+  | 'business_expenses' | 'tasks' | 'projects' | 'meetings' | 'client_documents' | 'installments';
 
 const TABLE_MAP: Record<keyof PulseData, TableName> = {
   personalIncome: 'personal_income',
@@ -92,6 +96,7 @@ const TABLE_MAP: Record<keyof PulseData, TableName> = {
   projects: 'projects',
   meetings: 'meetings',
   documents: 'client_documents',
+  installments: 'installments',
 };
 
 let toastId = 0;
@@ -560,6 +565,27 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const addInstallment = async (item: Omit<Installment, 'id' | 'createdAt'>) => {
+    const newItem: Installment = { ...item, id: generateId(), createdAt: new Date().toISOString() };
+    setArray('installments', (prev) => [newItem, ...prev]);
+    const ok = await dbInsert('installments', newItem);
+    if (!ok) setArray('installments', (prev) => prev.filter((i) => i.id !== newItem.id));
+  };
+
+  const updateInstallment = async (id: string, updates: Partial<Installment>) => {
+    const prev = data.installments.find(i => i.id === id);
+    setArray('installments', (prevArr) => prevArr.map((i) => (i.id === id ? { ...i, ...updates } : i)));
+    const ok = await dbUpdate('installments', id, updates);
+    if (!ok && prev) setArray('installments', (prevArr) => prevArr.map((i) => (i.id === id ? prev : i)));
+  };
+
+  const deleteInstallment = async (id: string) => {
+    const prev = data.installments.find(i => i.id === id);
+    setArray('installments', (prevArr) => prevArr.filter((i) => i.id !== id));
+    const ok = await dbDelete('installments', id);
+    if (!ok && prev) setArray('installments', (prevArr) => [prev, ...prevArr]);
+  };
+
   return (
     <DataContext.Provider
       value={{
@@ -577,6 +603,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         addProject, updateProject, deleteProject,
         addMeeting, updateMeeting, deleteMeeting,
         addDocument, deleteDocument,
+        addInstallment, updateInstallment, deleteInstallment,
       }}
     >
       {children}
