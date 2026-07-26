@@ -28,6 +28,14 @@ export default function ClientLogin() {
   const [showLogin, setShowLogin] = useState(false);
   const slides = useRef(generateSlides());
 
+  useEffect(() => {
+    if (!showLogin) return;
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % SLIDE_COUNT);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [showLogin]);
+
   if (authLoading) {
     return (
       <div className="flex h-[100dvh] items-center justify-center bg-[#f4f5f7]">
@@ -41,14 +49,6 @@ export default function ClientLogin() {
   if (user) {
     return <Navigate to="/client/dashboard" replace />;
   }
-
-  useEffect(() => {
-    if (!showLogin) return;
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % SLIDE_COUNT);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [showLogin]);
 
   if (!showLogin) {
     return <ClientOnboarding onComplete={() => setShowLogin(true)} />;

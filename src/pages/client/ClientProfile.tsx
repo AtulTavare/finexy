@@ -1,10 +1,21 @@
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../store/AuthContext';
 import { useClientData } from '../../store/ClientDataContext';
 import { Badge, Button } from '../../components/ui';
+import { LogOut } from 'lucide-react';
+import { useState } from 'react';
+import { ConfirmDialog } from '../../components/ui';
 
 export default function ClientProfile() {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
   const { client } = useClientData();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const confirmLogout = async () => {
+    await signOut();
+    navigate('/client/login', { replace: true });
+  };
 
   if (!client) return null;
 
@@ -57,6 +68,21 @@ export default function ClientProfile() {
         </div>
       </div>
       <Button onClick={() => navigate('/client/dashboard')} variant="secondary" className="w-full">Back to Dashboard</Button>
+      <button
+        onClick={() => setShowLogoutConfirm(true)}
+        className="md:hidden w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-red-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+      >
+        <LogOut size={16} /> Sign Out
+      </button>
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        title="Sign Out"
+        message="Are you sure you want to sign out?"
+        confirmLabel="Sign Out"
+        destructive
+        onConfirm={confirmLogout}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
     </div>
   );
 }

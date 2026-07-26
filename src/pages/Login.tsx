@@ -24,6 +24,13 @@ export default function Login() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const slides = useRef(generateSlides());
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % SLIDE_COUNT);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
   if (authLoading) {
     return (
       <div className="flex h-[100dvh] items-center justify-center bg-[#f4f5f7]">
@@ -40,13 +47,6 @@ export default function Login() {
     }
     return <Navigate to="/admin-730If1Q5/dashboard" replace />;
   }
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % SLIDE_COUNT);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

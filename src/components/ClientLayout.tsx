@@ -98,13 +98,6 @@ export default function ClientLayout() {
                 </NavLink>
               );
             })}
-            <button
-              onClick={handleLogout}
-              className="flex flex-col items-center justify-center gap-0.5 px-1.5 py-1.5 rounded-xl transition-all min-w-0 flex-1 text-red-400 hover:text-red-600 hover:bg-red-50 cursor-pointer"
-            >
-              <LogOut size={18} />
-              <span className="text-[8px] font-medium leading-none whitespace-nowrap">Sign Out</span>
-            </button>
           </div>
         </div>
       </div>
