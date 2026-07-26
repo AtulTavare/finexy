@@ -26,12 +26,14 @@ import ClientCalendar from './pages/client/ClientCalendar';
 import ClientProfile from './pages/client/ClientProfile';
 import { ClientGuard } from './components/ClientGuard';
 import ClientLayout from './components/ClientLayout';
+import InstallPrompt from './components/InstallPrompt';
 import './index.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
+        <InstallPrompt />
         <Routes>
           <Route path="/login" element={<ClientLogin />} />
           <Route path="/client/login" element={<ClientLogin />} />
