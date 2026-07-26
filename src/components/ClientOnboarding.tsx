@@ -38,10 +38,10 @@ const steps = [
       <div className="flex flex-col items-center text-center space-y-6">
         <img src="/logo.png" alt="Infinity" className="w-20 h-20 rounded-2xl shadow-lg" />
         <div>
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900">Welcome to Infinity</h2>
-          <p className="text-xl text-orange-600 font-semibold mt-1">Innovations</p>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">Welcome to Infinity</h2>
+          <p className="text-lg sm:text-xl text-orange-600 font-semibold mt-1">Innovations</p>
         </div>
-        <p className="text-base text-gray-600 max-w-lg leading-relaxed">
+        <p className="text-sm sm:text-base text-gray-600 max-w-xl lg:max-w-2xl leading-relaxed">
           We are a full-service digital agency that builds modern web applications, AI-powered solutions,
           and data-driven marketing strategies. Our mission is to help businesses like yours
           grow through technology that works.
@@ -63,11 +63,11 @@ const steps = [
     subtitle: 'What We Deliver',
     render: () => (
       <div className="flex flex-col items-center text-center space-y-6">
-        <h2 className="text-3xl md:text-4xl font-bold text-gray-900">Our Services</h2>
-        <p className="text-base text-gray-600 max-w-lg leading-relaxed">
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">Our Services</h2>
+        <p className="text-sm sm:text-base text-gray-600 max-w-xl lg:max-w-2xl leading-relaxed">
           From concept to launch, we provide end-to-end digital solutions tailored to your business needs.
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 w-full max-w-3xl">
           {services.map((s, i) => (
             <div key={i} className="flex items-start gap-3 bg-white border border-gray-200 rounded-xl p-4 text-left shadow-sm">
               <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
@@ -89,11 +89,11 @@ const steps = [
     subtitle: 'Why Choose Infinity',
     render: () => (
       <div className="flex flex-col items-center text-center space-y-6">
-        <h2 className="text-3xl md:text-4xl font-bold text-gray-900">You're in Good Hands</h2>
-        <p className="text-base text-gray-600 max-w-lg leading-relaxed">
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">You're in Good Hands</h2>
+        <p className="text-sm sm:text-base text-gray-600 max-w-xl lg:max-w-2xl leading-relaxed">
           Choosing the right partner makes all the difference. Here's why our clients trust us.
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-xl">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 w-full max-w-3xl">
           {benefits.map((b, i) => (
             <div key={i} className="flex items-start gap-3 bg-white border border-gray-200 rounded-xl p-4 text-left shadow-sm">
               <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 mt-0.5">
@@ -119,10 +119,10 @@ const steps = [
           <Check size={40} className="text-emerald-600" />
         </div>
         <div>
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900">Thank You</h2>
-          <p className="text-xl text-orange-600 font-semibold mt-1">for Choosing Infinity Innovations</p>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">Thank You</h2>
+          <p className="text-lg sm:text-xl text-orange-600 font-semibold mt-1">for Choosing Infinity Innovations</p>
         </div>
-        <p className="text-base text-gray-600 max-w-lg leading-relaxed">
+        <p className="text-sm sm:text-base text-gray-600 max-w-xl lg:max-w-2xl leading-relaxed">
           We're excited to work with you. Your success is our priority, and we're committed
           to delivering exceptional results every step of the way.
         </p>
@@ -140,7 +140,7 @@ export default function ClientOnboarding({ onComplete }: Props) {
 
   return (
     <div className="fixed inset-0 z-[200] bg-[#f4f5f7] flex items-center justify-center overflow-y-auto">
-      <div className="w-full max-w-3xl mx-auto px-4 py-8 md:py-12">
+      <div className="w-full max-w-3xl lg:max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 lg:py-16">
         {/* Progress dots */}
         <div className="flex justify-center gap-2 mb-8 md:mb-12">
           {steps.slice(0, 3).map((_, i) => (

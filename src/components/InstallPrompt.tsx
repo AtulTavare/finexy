@@ -86,7 +86,7 @@ export default function InstallPrompt() {
   ];
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-[100] animate-in slide-in-from-bottom-4 duration-300">
+    <div className="fixed z-[100] animate-in slide-in-from-bottom-4 duration-300 md:top-4 md:right-4 md:left-auto md:bottom-auto md:w-80 bottom-4 left-4 right-4">
       <div className="bg-white rounded-2xl p-4 shadow-xl border border-gray-100 flex items-start gap-3">
         <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center shrink-0">
           <Download size={20} className="text-orange-600" />
