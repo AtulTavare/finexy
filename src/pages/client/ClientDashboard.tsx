@@ -19,9 +19,18 @@ export default function ClientDashboard() {
   }
 
   if (!client) {
-    return <div className="text-gray-900 font-semibold">Could not load client data.</div>;
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+          <span className="text-3xl">🔒</span>
+        </div>
+        <h2 className="text-lg font-bold text-gray-900 mb-1">Access Restricted</h2>
+        <p className="text-sm text-gray-500 max-w-sm">Your account does not have permission to view this dashboard. Please contact Infinity Innovations support.</p>
+      </div>
+    );
   }
 
+  const hasData = projects.length > 0 || businessPayments.length > 0 || documents.length > 0;
   const activeProjects = projects.filter(p => p.status !== 'Completed');
   const totalPaid = businessPayments.reduce((s, p) => s + p.amount, 0);
   const totalBudget = projects.reduce((s, p) => s + (p.servicePricing || []).reduce((sum, svc) => sum + serviceTotalValue(svc), 0), 0);
@@ -54,47 +63,78 @@ export default function ClientDashboard() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="p-4 md:p-6 bg-white">
-          <h2 className="text-sm font-semibold text-gray-900 mb-4">Recent Payments</h2>
-          {recentPayments.length === 0 ? (
-            <p className="text-sm text-gray-400 italic">No payments recorded yet.</p>
-          ) : (
-            <div className="space-y-3">
-              {recentPayments.map(p => (
-                <div key={p.id} className="flex justify-between items-center border-b border-gray-50 pb-2">
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">{p.serviceName}</div>
-                    <div className="text-[10px] text-gray-500">{format(new Date(p.date), 'MMM d, yyyy')}</div>
-                  </div>
-                  <span className="text-sm tabular text-emerald-600 font-semibold">+{formatCurrency(p.amount)}</span>
-                </div>
-              ))}
+      {!hasData ? (
+        <Card className="p-8 bg-white">
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="w-16 h-16 rounded-full bg-orange-50 flex items-center justify-center mb-4">
+              <FolderKanban size={28} className="text-orange-500" />
             </div>
-          )}
-        </Card>
-
-        <Card className="p-4 md:p-6 bg-white">
-          <h2 className="text-sm font-semibold text-gray-900 mb-4">Quick Links</h2>
-          <div className="space-y-3">
-            <a href="/client/projects" className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors border border-gray-100">
-              <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center shrink-0"><FolderKanban size={20} className="text-orange-600" /></div>
-              <div className="flex-1"><div className="text-sm font-semibold text-gray-900">View Projects</div><div className="text-[10px] text-gray-500">{activeProjects.length} active</div></div>
-              <ArrowUpRight size={16} className="text-gray-400" />
-            </a>
-            <a href="/client/payments" className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors border border-gray-100">
-              <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center shrink-0"><CreditCard size={20} className="text-emerald-600" /></div>
-              <div className="flex-1"><div className="text-sm font-semibold text-gray-900">Payment History</div><div className="text-[10px] text-gray-500">{businessPayments.length} entries</div></div>
-              <ArrowUpRight size={16} className="text-gray-400" />
-            </a>
-            <a href="/client/documents" className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors border border-gray-100">
-              <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0"><FileText size={20} className="text-blue-600" /></div>
-              <div className="flex-1"><div className="text-sm font-semibold text-gray-900">Documents</div><div className="text-[10px] text-gray-500">{documents.length} files</div></div>
-              <ArrowUpRight size={16} className="text-gray-400" />
-            </a>
+            <h2 className="text-lg font-bold text-gray-900 mb-2">Your dashboard is ready</h2>
+            <p className="text-sm text-gray-500 max-w-md mb-6">
+              As the admin adds projects, tracks payments, and shares documents, everything will appear here in real time.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-lg">
+              <div className="border border-gray-100 rounded-xl p-4 text-left">
+                <FolderKanban size={20} className="text-gray-400 mb-2" />
+                <div className="text-xs font-semibold text-gray-900">Projects</div>
+                <div className="text-[10px] text-gray-500">Track scope, timeline, and progress</div>
+              </div>
+              <div className="border border-gray-100 rounded-xl p-4 text-left">
+                <CreditCard size={20} className="text-gray-400 mb-2" />
+                <div className="text-xs font-semibold text-gray-900">Payments</div>
+                <div className="text-[10px] text-gray-500">View invoices and payment history</div>
+              </div>
+              <div className="border border-gray-100 rounded-xl p-4 text-left">
+                <FileText size={20} className="text-gray-400 mb-2" />
+                <div className="text-xs font-semibold text-gray-900">Documents</div>
+                <div className="text-[10px] text-gray-500">Access shared files and reports</div>
+              </div>
+            </div>
           </div>
         </Card>
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="p-4 md:p-6 bg-white">
+            <h2 className="text-sm font-semibold text-gray-900 mb-4">Recent Payments</h2>
+            {recentPayments.length === 0 ? (
+              <p className="text-sm text-gray-400 italic">No payments recorded yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {recentPayments.map(p => (
+                  <div key={p.id} className="flex justify-between items-center border-b border-gray-50 pb-2">
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">{p.serviceName}</div>
+                      <div className="text-[10px] text-gray-500">{format(new Date(p.date), 'MMM d, yyyy')}</div>
+                    </div>
+                    <span className="text-sm tabular text-emerald-600 font-semibold">+{formatCurrency(p.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          <Card className="p-4 md:p-6 bg-white">
+            <h2 className="text-sm font-semibold text-gray-900 mb-4">Quick Links</h2>
+            <div className="space-y-3">
+              <a href="/client/projects" className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors border border-gray-100">
+                <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center shrink-0"><FolderKanban size={20} className="text-orange-600" /></div>
+                <div className="flex-1"><div className="text-sm font-semibold text-gray-900">View Projects</div><div className="text-[10px] text-gray-500">{activeProjects.length} active</div></div>
+                <ArrowUpRight size={16} className="text-gray-400" />
+              </a>
+              <a href="/client/payments" className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors border border-gray-100">
+                <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center shrink-0"><CreditCard size={20} className="text-emerald-600" /></div>
+                <div className="flex-1"><div className="text-sm font-semibold text-gray-900">Payment History</div><div className="text-[10px] text-gray-500">{businessPayments.length} entries</div></div>
+                <ArrowUpRight size={16} className="text-gray-400" />
+              </a>
+              <a href="/client/documents" className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors border border-gray-100">
+                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0"><FileText size={20} className="text-blue-600" /></div>
+                <div className="flex-1"><div className="text-sm font-semibold text-gray-900">Documents</div><div className="text-[10px] text-gray-500">{documents.length} files</div></div>
+                <ArrowUpRight size={16} className="text-gray-400" />
+              </a>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

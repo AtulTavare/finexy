@@ -1,10 +1,10 @@
 import { useClientData } from '../../store/ClientDataContext';
-import { Card, Badge } from '../../components/ui';
+import { Card } from '../../components/ui';
 import { formatCurrency } from '../../lib/utils';
 import { format } from 'date-fns';
 
 export default function ClientPayments() {
-  const { businessPayments } = useClientData();
+  const { businessPayments, loading } = useClientData();
 
   const total = businessPayments.reduce((s, p) => s + p.amount, 0);
 
@@ -21,10 +21,20 @@ export default function ClientPayments() {
         </div>
       </div>
 
-      <Card className="p-0 bg-white">
-        {businessPayments.length === 0 ? (
-          <div className="p-6 text-sm text-gray-400 italic">No payments recorded yet.</div>
-        ) : (
+      {loading ? (
+        <div className="text-gray-400 italic text-sm">Loading payments...</div>
+      ) : businessPayments.length === 0 ? (
+        <Card className="p-6 bg-white">
+          <div className="flex flex-col items-center justify-center py-10 text-center">
+            <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center mb-3">
+              <span className="text-2xl">💰</span>
+            </div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">No payments yet</h3>
+            <p className="text-xs text-gray-500 max-w-xs">Payments will appear here once they are recorded against your projects.</p>
+          </div>
+        </Card>
+      ) : (
+        <Card className="p-0 bg-white">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="text-xs uppercase text-gray-500 tracking-wider border-b border-gray-200">
@@ -45,8 +55,8 @@ export default function ClientPayments() {
               ))}
             </tbody>
           </table>
-        )}
-      </Card>
+        </Card>
+      )}
     </div>
   );
 }

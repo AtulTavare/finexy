@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useClientData } from '../../store/ClientDataContext';
-import { Card, Button } from '../../components/ui';
+import { Card } from '../../components/ui';
 import { supabase } from '../../lib/supabase';
 import { format } from 'date-fns';
 import { Download, Upload, FileText } from 'lucide-react';
 
 export default function ClientDocuments() {
-  const { client, documents, addDocument } = useClientData();
+  const { client, documents, addDocument, loading } = useClientData();
   const [uploading, setUploading] = useState(false);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -40,7 +40,7 @@ export default function ClientDocuments() {
       console.error('Upload failed:', err);
     } finally {
       setUploading(false);
-      e.target.value = '';
+      (e.target as HTMLInputElement).value = '';
     }
   };
 
@@ -72,10 +72,20 @@ export default function ClientDocuments() {
         </label>
       </Card>
 
-      <Card className="p-0 bg-white">
-        {documents.length === 0 ? (
-          <div className="p-6 text-sm text-gray-400 italic">No documents yet.</div>
-        ) : (
+      {loading ? (
+        <div className="text-gray-400 italic text-sm">Loading documents...</div>
+      ) : documents.length === 0 ? (
+        <Card className="p-6 bg-white">
+          <div className="flex flex-col items-center justify-center py-10 text-center">
+            <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center mb-3">
+              <FileText size={24} className="text-blue-500" />
+            </div>
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">No documents yet</h3>
+            <p className="text-xs text-gray-500 max-w-xs">Upload a document above or wait for the admin to share files with you.</p>
+          </div>
+        </Card>
+      ) : (
+        <Card className="p-0 bg-white">
           <div className="divide-y divide-gray-100">
             {documents.map(doc => (
               <div key={doc.id} className="flex items-center justify-between p-4 md:p-6 hover:bg-gray-50">
@@ -101,8 +111,8 @@ export default function ClientDocuments() {
               </div>
             ))}
           </div>
-        )}
-      </Card>
+        </Card>
+      )}
     </div>
   );
 }
