@@ -4,6 +4,14 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { toCamelCase, toSnakeCase, generateId } from '../lib/utils';
 
+function extractStoragePath(fileUrl: string): string | null {
+  try {
+    const url = new URL(fileUrl);
+    const match = url.pathname.match(/\/sign\/client-documents\/(.+)/);
+    return match ? decodeURIComponent(match[1]) : null;
+  } catch { return null; }
+}
+
 interface ClientInfo {
   id: string;
   clientId: string;
@@ -19,6 +27,7 @@ interface ClientDataContextType {
   meetings: Meeting[];
   loading: boolean;
   addDocument: (item: Omit<Document, 'id' | 'createdAt'>) => void;
+  deleteDocument: (id: string) => void;
 }
 
 const empty: ClientDataContextType = {
@@ -29,6 +38,7 @@ const empty: ClientDataContextType = {
   meetings: [],
   loading: true,
   addDocument: () => {},
+  deleteDocument: () => {},
 };
 
 const ClientDataContext = createContext<ClientDataContextType>(empty);
@@ -101,8 +111,23 @@ export function ClientDataProvider({ children }: { children: React.ReactNode }) 
     }
   };
 
+  const deleteDocument = async (id: string) => {
+    const prev = documents.find(d => d.id === id);
+    setDocuments(prev => prev.filter(d => d.id !== id));
+    const { error } = await supabase.from('client_documents').delete().eq('id', id);
+    if (error) {
+      console.error('Failed to delete document:', error);
+      if (prev) setDocuments(prevList => [prev, ...prevList]);
+      return;
+    }
+    if (prev?.fileUrl) {
+      const path = extractStoragePath(prev.fileUrl);
+      if (path) await supabase.storage.from('client-documents').remove([path]);
+    }
+  };
+
   return (
-    <ClientDataContext.Provider value={{ client, projects, businessPayments, documents, meetings, loading, addDocument }}>
+    <ClientDataContext.Provider value={{ client, projects, businessPayments, documents, meetings, loading, addDocument, deleteDocument }}>
       {children}
     </ClientDataContext.Provider>
   );

@@ -9,6 +9,14 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { format } from 'date-fns';
 
+function extractStoragePath(fileUrl: string): string | null {
+  try {
+    const url = new URL(fileUrl);
+    const match = url.pathname.match(/\/sign\/client-documents\/(.+)/);
+    return match ? decodeURIComponent(match[1]) : null;
+  } catch { return null; }
+}
+
 interface Toast {
   id: number;
   message: string;
@@ -539,8 +547,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const deleteDocument = async (id: string) => {
     const prev = data.documents.find(d => d.id === id);
     setArray('documents', (prevArr) => prevArr.filter((d) => d.id !== id));
-    const ok = await dbDelete('client_documents', id);
-    if (!ok && prev) setArray('documents', (prevArr) => [prev, ...prevArr]);
+    const { error } = await supabase.from('client_documents').delete().eq('id', id);
+    if (error) {
+      console.error('Failed to delete document:', error);
+      showToast('Failed to delete document');
+      if (prev) setArray('documents', (prevArr) => [prev, ...prevArr]);
+      return;
+    }
+    if (prev?.fileUrl) {
+      const path = extractStoragePath(prev.fileUrl);
+      if (path) await supabase.storage.from('client-documents').remove([path]);
+    }
   };
 
   return (

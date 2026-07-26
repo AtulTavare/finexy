@@ -3,14 +3,15 @@ import { useClientData } from '../../store/ClientDataContext';
 import { Card, ConfirmDialog } from '../../components/ui';
 import { supabase } from '../../lib/supabase';
 import { format } from 'date-fns';
-import { Download, Upload, FileText, CheckCircle } from 'lucide-react';
+import { Download, Upload, FileText, CheckCircle, Trash2 } from 'lucide-react';
 
 export default function ClientDocuments() {
-  const { client, documents, addDocument, loading } = useClientData();
+  const { client, documents, addDocument, deleteDocument, loading } = useClientData();
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [successMsg, setSuccessMsg] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<Document | null>(null);
 
   const onFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -131,13 +132,22 @@ export default function ClientDocuments() {
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleDownload(doc)}
-                  className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-full transition-all cursor-pointer shrink-0"
-                  title="Download"
-                >
-                  <Download size={16} />
-                </button>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => handleDownload(doc)}
+                    className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 rounded-full transition-all cursor-pointer"
+                    title="Download"
+                  >
+                    <Download size={16} />
+                  </button>
+                  <button
+                    onClick={() => setDeleteTarget(doc)}
+                    className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all cursor-pointer"
+                    title="Delete"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -151,6 +161,15 @@ export default function ClientDocuments() {
         destructive={false}
         onConfirm={confirmUpload}
         onCancel={() => setPendingFile(null)}
+      />
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Delete Document"
+        message={deleteTarget ? `Delete "${deleteTarget.name}"? This cannot be undone.` : ''}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => { if (deleteTarget) deleteDocument(deleteTarget.id); setDeleteTarget(null); }}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   );
