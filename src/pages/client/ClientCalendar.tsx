@@ -84,7 +84,7 @@ export default function ClientCalendar() {
                   <div className="space-y-0.5">
                     {m.slice(0, 2).map(me => (
                       <div key={me.id} className="text-[7px] md:text-[9px] text-white px-0.5 md:px-1 py-0.5 rounded truncate bg-orange-500 leading-tight">
-                        {me.time} {me.title}
+                        {me.time} {me.reason || me.title}
                       </div>
                     ))}
                     {p.slice(0, 1).map(pr => (
