@@ -196,10 +196,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const channel = supabase.channel('db-changes');
 
     for (const [key, table] of Object.entries(TABLE_MAP)) {
-      channel.on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table, filter: `user_id=eq.${user.id}` },
-        (payload) => {
+      const filter = table === 'client_documents' ? undefined : `user_id=eq.${user.id}`;
+      const channelConfig: any = { event: '*', schema: 'public', table };
+      if (filter) channelConfig.filter = filter;
+      channel.on('postgres_changes', channelConfig, (payload) => {
           const k = key as keyof PulseData;
           if (payload.eventType === 'INSERT') {
             setData((prev) => {
@@ -248,11 +248,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const entries = Object.entries(TABLE_MAP) as [keyof PulseData, TableName][];
     const results = await Promise.all(
       entries.map(async ([key, table]) => {
-        const { data: rows } = await supabase
-          .from(table)
-          .select('*')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false });
+        let query = supabase.from(table).select('*').order('created_at', { ascending: false });
+        if (table !== 'client_documents') {
+          query = query.eq('user_id', userId);
+        }
+        const { data: rows } = await query;
         return [key, (rows || []).map((r: any) => toCamelCase(r))] as const;
       })
     );
