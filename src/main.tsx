@@ -5,6 +5,7 @@ import { AuthProvider } from './store/AuthContext';
 import { DataProvider } from './store/DataContext';
 import { AuthGuard } from './components/AuthGuard';
 import { Layout } from './components/Layout';
+import { NotificationProvider } from './store/NotificationContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Personal from './pages/Personal';
@@ -33,6 +34,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
+        <NotificationProvider>
         <InstallPrompt />
         <Routes>
           <Route path="/login" element={<ClientLogin />} />
@@ -68,6 +70,7 @@ createRoot(document.getElementById('root')!).render(
             </Route>
           </Route>
         </Routes>
+        </NotificationProvider>
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>
