@@ -41,6 +41,9 @@ export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming
   const [invoiceReference, setInvoiceReference] = useState('');
   const [markAsInstallment, setMarkAsInstallment] = useState(false);
   const [dueDate, setDueDate] = useState(new Date());
+  const [createSchedule, setCreateSchedule] = useState(false);
+  const [scheduleCount, setScheduleCount] = useState(2);
+  const [scheduleRows, setScheduleRows] = useState<Array<{ amount: string; dueDate: Date }>>([]);
 
   const [brand, setBrand] = useState<Brand>('Infinity Innovations');
   const [category, setCategory] = useState<BusinessExpense['category']>('Tools');
@@ -61,13 +64,23 @@ export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming
       setDueDate(new Date());
     } else {
       setType('incoming');
-      setProjectId(''); setServiceName(''); setAmount(''); setDate(new Date()); setInvoiceReference(''); setMarkAsInstallment(false); setDueDate(new Date()); setBrand('Infinity Innovations'); setCategory('Tools');
+      setProjectId(''); setServiceName(''); setAmount(''); setDate(new Date()); setInvoiceReference(''); setMarkAsInstallment(false); setDueDate(new Date()); setBrand('Infinity Innovations'); setCategory('Tools'); setCreateSchedule(false); setScheduleCount(2); setScheduleRows([]);
     }
   }, [editItem, isOpen]);
 
   useEffect(() => {
     setServiceName('');
   }, [projectId]);
+
+  useEffect(() => {
+    setScheduleRows(prev => {
+      if (prev.length === scheduleCount) return prev;
+      if (prev.length < scheduleCount) {
+        return [...prev, ...Array.from({ length: scheduleCount - prev.length }, (_, i) => ({ amount: '', dueDate: new Date() }))];
+      }
+      return prev.slice(0, scheduleCount);
+    });
+  }, [scheduleCount]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,14 +92,29 @@ export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming
       } else {
         if (!projectId || !serviceName) return;
         const client = clients.find((c: any) => c.id === clientId);
-        onSaveIncoming({ clientId, projectId, serviceName, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd'), invoiceReference, brand: client?.brand || 'Infinity Innovations' });
+        const paymentDate = format(date, 'yyyy-MM-dd');
+        onSaveIncoming({ clientId, projectId, serviceName, amount: parseFloat(amount), date: paymentDate, invoiceReference, brand: client?.brand || 'Infinity Innovations' });
         if (markAsInstallment && onSaveInstallment) {
           onSaveInstallment({
             clientId, projectId, serviceName, amount: parseFloat(amount),
             dueDate: format(dueDate, 'yyyy-MM-dd'),
-            paidDate: format(date, 'yyyy-MM-dd'),
+            paidDate: paymentDate,
             status: 'paid',
             invoiceReference,
+          });
+        }
+        if (createSchedule && onSaveInstallment) {
+          scheduleRows.forEach(row => {
+            if (!row.amount) return;
+            const due = format(row.dueDate, 'yyyy-MM-dd');
+            const isPaid = due <= paymentDate;
+            onSaveInstallment({
+              clientId, projectId, serviceName, amount: parseFloat(row.amount),
+              dueDate: due,
+              paidDate: isPaid ? paymentDate : undefined,
+              status: isPaid ? 'paid' : 'pending',
+              invoiceReference,
+            });
           });
         }
       }
@@ -149,6 +177,41 @@ export function PaymentModal({ isOpen, onClose, onSaveIncoming, onUpdateIncoming
               <div>
                 <Label>Due Date</Label>
                 <DatePicker value={dueDate} onChange={setDueDate} />
+              </div>
+            )}
+            {!editItem && (
+              <div className="flex items-center gap-2 pt-1">
+                <input type="checkbox" id="createSchedule" checked={createSchedule} onChange={e => setCreateSchedule(e.target.checked)} className="rounded border-gray-200 text-orange-500 focus:ring-orange-400" />
+                <label htmlFor="createSchedule" className="text-xs font-medium text-gray-700 cursor-pointer">Create installment schedule</label>
+              </div>
+            )}
+            {!editItem && createSchedule && (
+              <div className="space-y-3 border border-gray-100 rounded-xl p-4 bg-gray-50/50">
+                <div>
+                  <Label>No. of installments</Label>
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={() => setScheduleCount(Math.max(2, scheduleCount - 1))} className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-100 text-lg font-medium leading-none" disabled={scheduleCount <= 2}>–</button>
+                    <span className="text-sm font-semibold text-gray-900 w-6 text-center">{scheduleCount}</span>
+                    <button type="button" onClick={() => setScheduleCount(scheduleCount + 1)} className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-100 text-lg font-medium leading-none">+</button>
+                  </div>
+                </div>
+                <div className="space-y-2 max-h-48 overflow-y-auto no-scrollbar">
+                  {scheduleRows.map((row, i) => {
+                    const isPaid = row.dueDate && date && format(row.dueDate, 'yyyy-MM-dd') <= format(date, 'yyyy-MM-dd');
+                    return (
+                      <div key={i} className="flex items-start gap-2">
+                        <span className="text-xs font-semibold text-gray-400 mt-3 w-5 shrink-0">{i + 1}.</span>
+                        <div className="flex-1">
+                          <Input type="number" step="0.01" placeholder="Amount" value={row.amount} onChange={e => { const r = [...scheduleRows]; r[i] = { ...r[i], amount: e.target.value }; setScheduleRows(r); }} />
+                        </div>
+                        <div className="flex-1">
+                          <DatePicker value={row.dueDate} onChange={d => { const r = [...scheduleRows]; r[i] = { ...r[i], dueDate: d }; setScheduleRows(r); }} />
+                        </div>
+                        <span className={`text-[10px] font-semibold mt-3 w-12 shrink-0 ${isPaid ? 'text-emerald-600' : 'text-amber-600'}`}>{isPaid ? 'paid' : 'pending'}</span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </>
