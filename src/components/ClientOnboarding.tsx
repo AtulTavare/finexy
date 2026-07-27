@@ -30,10 +30,10 @@ const benefits = [
 ];
 
 const screens = [
-  { id: 'welcome', mobileBg: 'from-[#a3e635] to-[#65a30d]', desktopImage: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&q=80', desktopGradient: 'from-violet-950/70 via-fuchsia-900/30 to-transparent' },
-  { id: 'services', mobileBg: 'from-[#ff6b9e] to-[#e64980]', desktopImage: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=900&q=80', desktopGradient: 'from-orange-950/70 via-amber-900/30 to-transparent' },
-  { id: 'benefits', mobileBg: 'bg-[#FFEA00]', desktopImage: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=900&q=80', desktopGradient: 'from-emerald-950/70 via-teal-900/30 to-transparent' },
-  { id: 'thankyou', mobileBg: 'from-[#7CD4FD] to-[#3AB7FE]', desktopImage: 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=900&q=80', desktopGradient: 'from-sky-950/70 via-indigo-900/30 to-transparent' },
+  { id: 'welcome', mobileMedia: 'https://res.cloudinary.com/dlkxwisy3/video/upload/v1785147324/infinity_onboarding_4_qufy7g.mp4', desktopMedia: 'https://res.cloudinary.com/dlkxwisy3/video/upload/v1785147324/infinity_onboarding_4_qufy7g.mp4', isVideo: true, desktopGradient: 'from-violet-950/70 via-fuchsia-900/30 to-transparent' },
+  { id: 'services', mobileMedia: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=900&q=80', desktopMedia: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=900&q=80', isVideo: false, desktopGradient: 'from-orange-950/70 via-amber-900/30 to-transparent' },
+  { id: 'benefits', mobileMedia: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=900&q=80', desktopMedia: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=900&q=80', isVideo: false, desktopGradient: 'from-emerald-950/70 via-teal-900/30 to-transparent' },
+  { id: 'thankyou', mobileMedia: 'https://res.cloudinary.com/dlkxwisy3/video/upload/v1785147024/infinity_onboard_kuenkr.mp4', desktopMedia: 'https://res.cloudinary.com/dlkxwisy3/video/upload/v1785147024/infinity_onboard_kuenkr.mp4', isVideo: true, desktopGradient: 'from-sky-950/70 via-indigo-900/30 to-transparent' },
 ];
 
 export default function ClientOnboarding({ onComplete }: Props) {
@@ -209,14 +209,26 @@ export default function ClientOnboarding({ onComplete }: Props) {
     return <Shield size={28} className="text-emerald-600" />;
   };
 
+  const mobileBackground = () => {
+    if (screen.isVideo) {
+      return (
+        <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover">
+          <source src={screen.mobileMedia} type="video/mp4" />
+        </video>
+      );
+    }
+    return <img src={screen.mobileMedia} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />;
+  };
+
   const mobileLayout = () => {
-    const isWarm = step === 1 || step === 2;
     return (
-      <div className={`md:hidden fixed inset-0 z-[200] flex flex-col bg-gradient-to-br ${screen.mobileBg}`}>
+      <div className="md:hidden fixed inset-0 z-[200] flex flex-col bg-black">
         {/* Hero area */}
-        <div className="flex-1 relative flex items-center justify-center overflow-hidden pt-10">
+        <div className="flex-1 relative flex items-center justify-center overflow-hidden">
+          {mobileBackground()}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/60" />
           {mobileHero()}
-          <div className={`absolute -bottom-10 z-20 w-18 h-18 rounded-2xl ${isWarm ? 'bg-black' : 'bg-white/90 backdrop-blur-xl'} shadow-2xl border ${isWarm ? 'border-white/20' : 'border-white/50'} flex items-center justify-center ring-4 ${isWarm ? 'ring-black/20' : 'ring-white/30'}`}>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-18 h-18 rounded-2xl bg-white/90 backdrop-blur-xl shadow-2xl border border-white/50 flex items-center justify-center ring-4 ring-white/30">
             <motion.div animate={{ y: [0, -4, 0] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}>
               {mobileBadgeIcon()}
             </motion.div>
@@ -237,7 +249,13 @@ export default function ClientOnboarding({ onComplete }: Props) {
     return (
       <div className="hidden md:flex w-full h-full">
         <div className="relative w-1/2 h-full overflow-hidden shrink-0">
-          <img src={screen.desktopImage} alt="" className="w-full h-full object-cover" loading="lazy" />
+          {screen.isVideo ? (
+            <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover">
+              <source src={screen.desktopMedia} type="video/mp4" />
+            </video>
+          ) : (
+            <img src={screen.desktopMedia} alt="" className="w-full h-full object-cover" loading="lazy" />
+          )}
           <div className={`absolute inset-0 bg-gradient-to-br ${screen.desktopGradient}`} />
           <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
         </div>
