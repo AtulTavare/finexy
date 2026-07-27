@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Wallet, Briefcase, CheckSquare, Plus, X, Menu,
-  Calendar as CalendarIcon, FolderKanban, Search, Bell, HelpCircle, LogOut,
+  Calendar as CalendarIcon, FolderKanban, Search, Bell, HelpCircle, LogOut, User,
 } from 'lucide-react';
 import { useAuth } from '../store/AuthContext';
 import { ConfirmDialog } from './ui';
@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { path: '/admin-shubhaminfinity/projects', label: 'Projects', icon: FolderKanban },
   { path: '/admin-shubhaminfinity/calendar', label: 'Calendar', icon: CalendarIcon },
   { path: '/admin-shubhaminfinity/tasks', label: 'Tasks', icon: CheckSquare },
+  { path: '/admin-shubhaminfinity/profile', label: 'Profile', icon: User },
 ];
 
 export function Layout() {
@@ -103,7 +104,7 @@ export function Layout() {
             <div className="flex items-center space-x-2" />
 
             <div className="flex bg-white rounded-full p-1 shadow-sm border border-gray-100">
-              {NAV_ITEMS.map((item) => (
+              {NAV_ITEMS.filter(i => i.path !== '/admin-shubhaminfinity/profile').map((item) => (
                 <NavLink
                   key={item.path}
                   to={item.path}

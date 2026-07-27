@@ -1,11 +1,19 @@
 import React, { useState, useRef } from 'react';
-import { User, Camera } from 'lucide-react';
+import { User, Camera, LogOut } from 'lucide-react';
 import { useAuth } from '../../store/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Button } from '../../components/ui';
+import { useNavigate } from 'react-router-dom';
+import { Button, ConfirmDialog } from '../../components/ui';
 
 export default function AdminProfile() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const confirmLogout = async () => {
+    await signOut();
+    navigate('/admin-shubhaminfinity/login', { replace: true });
+  };
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(user?.user_metadata?.avatar_url || null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -66,6 +74,21 @@ export default function AdminProfile() {
         </div>
       </div>
       <Button onClick={() => window.history.back()} variant="secondary" className="w-full">Back to Dashboard</Button>
+      <button
+        onClick={() => setShowLogoutConfirm(true)}
+        className="md:hidden w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-red-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+      >
+        <LogOut size={16} /> Sign Out
+      </button>
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        title="Sign Out"
+        message="Are you sure you want to sign out?"
+        confirmLabel="Sign Out"
+        destructive
+        onConfirm={confirmLogout}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
     </div>
   );
 }
