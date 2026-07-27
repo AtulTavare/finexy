@@ -131,7 +131,7 @@ export default function Business() {
 
       <div>
         {activeTab === 'pipeline' && <PipelineView leads={filteredLeads} updateLead={updateLead} deleteLead={deleteLead} onEdit={(lead) => { setEditingLead(lead); setShowLeadModal(true); }} />}
-        {activeTab === 'clients' && <ClientsView clients={filteredClients} projects={projects} onEdit={(c) => { setEditingClient(c); setShowClientModal(true); }} />}
+        {activeTab === 'clients' && <ClientsView clients={filteredClients} projects={projects} onEdit={(c) => { setEditingClient(c); setShowClientModal(true); }} onDelete={deleteClient} />}
         {activeTab === 'payments' && <PaymentsView payments={filteredPayments} clients={clients} projects={projects} deletePayment={deleteBusinessPayment} onEdit={(p) => { setEditingPayment(p); setShowPaymentModal(true); }} />}
         {activeTab === 'expenses' && <ExpensesView expenses={filteredExpenses} deleteExpense={deleteBusinessExpense} onEdit={(e) => { setEditingExpense(e); setShowExpenseModal(true); }} />}
         {activeTab === 'installments' && <InstallmentsView installments={filteredInstallments} clients={clients} projects={projects} onMarkPaid={(inst) => { setShowPaidInstallmentModal(inst); setPaidAmount(inst.amount.toString()); setPaidDate(new Date()); setPaidInvoiceRef(''); }} onDelete={deleteInstallment} />}
@@ -140,7 +140,7 @@ export default function Business() {
       <LeadModal isOpen={showLeadModal} onClose={() => { setShowLeadModal(false); setEditingLead(null); }} onSave={addLead} onUpdate={updateLead} editItem={editingLead} />
       <PaymentModal isOpen={showPaymentModal} onClose={() => { setShowPaymentModal(false); setEditingPayment(null); }} onSaveIncoming={addBusinessPayment} onUpdateIncoming={updateBusinessPayment} onSaveOutgoing={addBusinessExpense} onUpdateOutgoing={updateBusinessExpense} clients={filteredClients} payments={businessPayments} projects={projects} editItem={editingPayment} onSaveInstallment={addInstallment} />
       <AddExpenseModal isOpen={showExpenseModal} onClose={() => { setShowExpenseModal(false); setEditingExpense(null); }} onSaveBusiness={addBusinessExpense} onUpdateBusiness={updateBusinessExpense} editBusiness={editingExpense} initialType="business" />
-      <ClientModal isOpen={showClientModal} onClose={() => { setShowClientModal(false); setEditingClient(null); }} onSave={addClient} onUpdate={updateClient} editItem={editingClient} />
+      <ClientModal isOpen={showClientModal} onClose={() => { setShowClientModal(false); setEditingClient(null); }} onSave={addClient} onUpdate={updateClient} editItem={editingClient} clients={clients} />
 
       {/* Create Installment Modal */}
       <Modal isOpen={showInstallmentModal} onClose={() => setShowInstallmentModal(false)} title="Create Installment">
@@ -329,52 +329,73 @@ interface ClientsViewProps {
   clients: Client[];
   projects: Project[];
   onEdit: (client: Client) => void;
+  onDelete: (id: string) => void;
 }
 
-function ClientsView({ clients, projects, onEdit }: ClientsViewProps) {
+function ClientsView({ clients, projects, onEdit, onDelete }: ClientsViewProps) {
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   if (clients.length === 0) return <div className="text-gray-900 italic">No clients yet.</div>;
   return (
-    <Card className="p-0 bg-white">
-      <table className="w-full text-left text-sm">
-        <thead>
-          <tr className="text-xs uppercase text-gray-500 tracking-wider border-b border-gray-200">
-            <th className="pb-2 p-4 md:p-6 font-semibold">Client Name</th>
-            <th className="pb-2 p-4 md:p-6 font-semibold hidden md:table-cell">Projects</th>
-            <th className="pb-2 p-4 md:p-6 font-semibold hidden md:table-cell">Contact</th>
-            <th className="pb-2 p-4 md:p-6 font-semibold">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {clients.map((c: any) => {
-            const clientProjects = projects.filter((p: any) => p.clientId === c.id);
-            return (
-              <tr key={c.id} className="border-b border-gray-200 hover:bg-gray-50 cursor-pointer" onClick={() => onEdit(c)}>
-                <td className="p-4 md:p-6 font-medium">
-                  <div>{c.name}</div>
-                  <div className="md:hidden text-[10px] text-gray-500 mt-0.5">{c.contact}</div>
-                  {c.businessName && <div className="text-[10px] text-gray-900 mt-1">{c.businessName}</div>}
-                </td>
-                <td className="p-4 md:p-6 hidden md:table-cell">
-                  <div className="flex flex-wrap gap-1">
-                    {clientProjects.length === 0 ? (
-                      <span className="text-[10px] text-gray-400 italic">No projects</span>
-                    ) : (
-                      clientProjects.map((p: any) => (
-                        <Badge key={p.id} variant="default">{p.title}</Badge>
-                      ))
-                    )}
-                  </div>
-                </td>
-                <td className="p-4 md:p-6 hidden md:table-cell text-gray-900">{c.contact}</td>
-                <td className="p-4 md:p-6">
-                  <Badge variant={c.status === 'Active' ? 'success' : c.status === 'Paused' ? 'warning' : 'danger'}>{c.status}</Badge>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </Card>
+    <>
+      <Card className="p-0 bg-white">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="text-xs uppercase text-gray-500 tracking-wider border-b border-gray-200">
+              <th className="pb-2 p-4 md:p-6 font-semibold">Client Name</th>
+              <th className="pb-2 p-4 md:p-6 font-semibold hidden md:table-cell">Projects</th>
+              <th className="pb-2 p-4 md:p-6 font-semibold hidden md:table-cell">Contact</th>
+              <th className="pb-2 p-4 md:p-6 font-semibold">Status</th>
+              <th className="pb-2 p-4 md:p-6 font-semibold w-10"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {clients.map((c: any) => {
+              const clientProjects = projects.filter((p: any) => p.clientId === c.id);
+              return (
+                <tr key={c.id} className="border-b border-gray-200 hover:bg-gray-50 cursor-pointer" onClick={() => onEdit(c)}>
+                  <td className="p-4 md:p-6 font-medium">
+                    <div>{c.name}</div>
+                    <div className="md:hidden text-[10px] text-gray-500 mt-0.5">{c.contact}</div>
+                    {c.businessName && <div className="text-[10px] text-gray-900 mt-1">{c.businessName}</div>}
+                  </td>
+                  <td className="p-4 md:p-6 hidden md:table-cell">
+                    <div className="flex flex-wrap gap-1">
+                      {clientProjects.length === 0 ? (
+                        <span className="text-[10px] text-gray-400 italic">No projects</span>
+                      ) : (
+                        clientProjects.map((p: any) => (
+                          <Badge key={p.id} variant="default">{p.title}</Badge>
+                        ))
+                      )}
+                    </div>
+                  </td>
+                  <td className="p-4 md:p-6 hidden md:table-cell text-gray-900">{c.contact}</td>
+                  <td className="p-4 md:p-6">
+                    <Badge variant={c.status === 'Active' ? 'success' : c.status === 'Paused' ? 'warning' : 'danger'}>{c.status}</Badge>
+                  </td>
+                  <td className="p-4 md:p-6" onClick={e => e.stopPropagation()}>
+                    <button
+                      onClick={() => setDeleteConfirm(c.id)}
+                      className="text-gray-400 hover:text-red-500 transition-colors"
+                      title="Delete client"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </Card>
+      <ConfirmDialog
+        isOpen={!!deleteConfirm}
+        onCancel={() => setDeleteConfirm(null)}
+        onConfirm={() => { if (deleteConfirm) { onDelete(deleteConfirm); setDeleteConfirm(null); } }}
+        title="Delete Client"
+        message="Are you sure you want to delete this client? This action cannot be undone. All associated data (engagements, payments, projects, meetings) will also be deleted."
+      />
+    </>
   );
 }
 
@@ -620,9 +641,10 @@ interface ClientModalProps {
   onSave: (item: Omit<Client, 'id' | 'createdAt'>) => Promise<string | null>;
   onUpdate?: (id: string, updates: Partial<Client>) => void;
   editItem?: Client | null;
+  clients: Client[];
 }
 
-function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModalProps) {
+function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem, clients }: ClientModalProps) {
   const [name, setName] = useState('');
   const [brand, setBrand] = useState<Brand>('Infinity Innovations');
   const [contact, setContact] = useState('');
@@ -721,6 +743,13 @@ function ClientModal({ isOpen, onClose, onSave, onUpdate, editItem }: ClientModa
 
     setSaving(true);
     setLoginError('');
+
+    const duplicate = clients.find(c => c.name.toLowerCase().trim() === name.toLowerCase().trim());
+    if (duplicate) {
+      setLoginError(`A client named "${name}" already exists.`);
+      setSaving(false);
+      return;
+    }
 
     const clientId = await onSave({ name, brand, contact, mail, address, businessName, status, services: [] });
 
