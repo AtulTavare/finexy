@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useData } from '../store/DataContext';
 import { Card, Button, Input, Select, Label, Modal, Badge, DatePicker, ConfirmDialog } from '../components/ui';
+import { AddExpenseModal } from '../components/AddExpenseModal';
 import { formatCurrency } from '../lib/utils';
 import { Brand, Lead, Client, BusinessPayment, BusinessExpense, Project, Installment } from '../types';
 import { format } from 'date-fns';
@@ -138,7 +139,7 @@ export default function Business() {
 
       <LeadModal isOpen={showLeadModal} onClose={() => { setShowLeadModal(false); setEditingLead(null); }} onSave={addLead} onUpdate={updateLead} editItem={editingLead} />
       <PaymentModal isOpen={showPaymentModal} onClose={() => { setShowPaymentModal(false); setEditingPayment(null); }} onSaveIncoming={addBusinessPayment} onUpdateIncoming={updateBusinessPayment} onSaveOutgoing={addBusinessExpense} onUpdateOutgoing={updateBusinessExpense} clients={filteredClients} payments={businessPayments} projects={projects} editItem={editingPayment} onSaveInstallment={addInstallment} />
-      <BusinessExpenseModal isOpen={showExpenseModal} onClose={() => { setShowExpenseModal(false); setEditingExpense(null); }} onSave={addBusinessExpense} onUpdate={updateBusinessExpense} editItem={editingExpense} />
+      <AddExpenseModal isOpen={showExpenseModal} onClose={() => { setShowExpenseModal(false); setEditingExpense(null); }} onSaveBusiness={addBusinessExpense} onUpdateBusiness={updateBusinessExpense} editBusiness={editingExpense} initialType="business" />
       <ClientModal isOpen={showClientModal} onClose={() => { setShowClientModal(false); setEditingClient(null); }} onSave={addClient} onUpdate={updateClient} editItem={editingClient} />
 
       {/* Create Installment Modal */}
@@ -608,72 +609,6 @@ function LeadModal({ isOpen, onClose, onSave, onUpdate, editItem }: LeadModalPro
         <div><Label>Next Action</Label><Input value={nextAction} onChange={e => setNextAction(e.target.value)} /></div>
         <div><Label>Next Action Date</Label><DatePicker value={nextActionDate} onChange={setNextActionDate} /></div>
         <Button type="submit" className="w-full mt-4">{editItem ? 'Update Lead' : 'Save Lead'}</Button>
-      </form>
-    </Modal>
-  );
-}
-
-interface BusinessExpenseModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (item: Omit<BusinessExpense, 'id' | 'createdAt'>) => void;
-  onUpdate?: (id: string, updates: Partial<BusinessExpense>) => void;
-  editItem?: BusinessExpense | null;
-}
-
-function BusinessExpenseModal({ isOpen, onClose, onSave, onUpdate, editItem }: BusinessExpenseModalProps) {
-  const [brand, setBrand] = useState<Brand>('Infinity Innovations');
-  const [category, setCategory] = useState<BusinessExpense['category']>('Tools');
-  const [amount, setAmount] = useState('');
-  const [date, setDate] = useState(new Date());
-
-  useEffect(() => {
-    if (editItem) {
-      setBrand(editItem.brand);
-      setCategory(editItem.category as BusinessExpense['category']);
-      setAmount(editItem.amount.toString());
-      setDate(new Date(editItem.date));
-    } else {
-      setBrand('Infinity Innovations'); setCategory('Tools'); setAmount(''); setDate(new Date());
-    }
-  }, [editItem, isOpen]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!amount) return;
-    if (editItem && onUpdate) {
-      onUpdate(editItem.id, { brand, category, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd') });
-    } else {
-      onSave({ brand, category, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd') });
-    }
-    onClose();
-  };
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title={editItem ? 'Edit Business Expense' : 'Add Business Expense'}>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <Label>Brand</Label>
-          <Select value={brand} onChange={e => setBrand(e.target.value as Brand)}>
-            {BRANDS.filter(b => b !== 'All').map(b => <option key={b} value={b}>{b}</option>)}
-          </Select>
-        </div>
-        <div>
-          <Label>Category</Label>
-          <Select value={category} onChange={e => setCategory(e.target.value as any)}>
-            <option value="Tools">Tools</option>
-            <option value="Ads">Ads</option>
-            <option value="Contractor">Contractor</option>
-            <option value="Subscription">Subscription</option>
-            <option value="Domain Purchase">Domain Purchase</option>
-            <option value="SSL Certificate">SSL Certificate</option>
-            <option value="Posting Subscription">Posting Subscription</option>
-            <option value="Other">Other</option>
-          </Select>
-        </div>
-        <div><Label>Amount</Label><Input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} required /></div>
-        <div><Label>Date</Label><DatePicker value={date} onChange={setDate} /></div>
-        <Button type="submit" className="w-full mt-4">{editItem ? 'Update Expense' : 'Save Expense'}</Button>
       </form>
     </Modal>
   );

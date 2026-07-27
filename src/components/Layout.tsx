@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Wallet, Briefcase, CheckSquare, Plus, X, Menu,
   Calendar as CalendarIcon, FolderKanban, Search, Bell, HelpCircle, LogOut, User,
 } from 'lucide-react';
 import { useAuth } from '../store/AuthContext';
+import { useData } from '../store/DataContext';
+import { AddExpenseModal } from './AddExpenseModal';
 import { ConfirmDialog } from './ui';
 
 const NAV_ITEMS = [
@@ -21,8 +23,16 @@ export function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const { addPersonalExpense, addBusinessExpense } = useData();
   const [fabOpen, setFabOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+
+  useEffect(() => {
+    const onOpenExpense = () => setShowExpenseModal(true);
+    window.addEventListener('open-add-expense-modal', onOpenExpense);
+    return () => window.removeEventListener('open-add-expense-modal', onOpenExpense);
+  }, []);
 
   const trigger = (event: string, path: string) => {
     if (location.pathname !== path) {
@@ -45,24 +55,25 @@ export function Layout() {
     { label: 'Add Task', action: () => trigger('open-task-modal', '/admin-shubhaminfinity/tasks') },
   ];
 
+  const addExpense = () => { setShowExpenseModal(true); setFabOpen(false); };
+
   if (location.pathname === '/admin-shubhaminfinity/personal') {
     fabActions = [
       { label: 'Add Income', action: () => trigger('open-income-modal', '/admin-shubhaminfinity/personal') },
-      { label: 'Add Expense', action: () => trigger('open-expense-modal', '/admin-shubhaminfinity/personal') },
+      { label: 'Add Expense', action: addExpense },
       { label: 'Add Debt', action: () => trigger('open-debt-modal', '/admin-shubhaminfinity/personal') },
     ];
   } else if (location.pathname === '/admin-shubhaminfinity/business') {
     fabActions = [
       { label: 'Add Lead', action: () => trigger('open-lead-modal', '/admin-shubhaminfinity/business') },
       { label: 'Add Client', action: () => trigger('open-client-modal', '/admin-shubhaminfinity/business') },
-
       { label: 'Log Payment', action: () => trigger('open-payment-modal', '/admin-shubhaminfinity/business') },
-      { label: 'Add Expense', action: () => trigger('open-business-expense-modal', '/admin-shubhaminfinity/business') },
+      { label: 'Add Expense', action: addExpense },
     ];
   } else if (location.pathname === '/admin-shubhaminfinity/dashboard') {
     fabActions = [
       { label: 'Add Task', action: () => trigger('open-task-modal', '/admin-shubhaminfinity/tasks') },
-      { label: 'Add Expense', action: () => trigger('open-expense-modal', '/admin-shubhaminfinity/personal') },
+      { label: 'Add Expense', action: addExpense },
       { label: 'Add Lead', action: () => trigger('open-lead-modal', '/admin-shubhaminfinity/business') },
     ];
   }
@@ -188,6 +199,7 @@ export function Layout() {
           </div>
         </main>
       </div>
+      <AddExpenseModal isOpen={showExpenseModal} onClose={() => setShowExpenseModal(false)} onSavePersonal={addPersonalExpense} onSaveBusiness={addBusinessExpense} />
       <ConfirmDialog
         isOpen={showLogoutConfirm}
         title="Sign Out"

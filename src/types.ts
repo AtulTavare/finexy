@@ -80,15 +80,31 @@ export interface BusinessPayment {
   userId?: string;
 }
 
+export type BusinessExpenseCategory =
+  | 'Tools' | 'Ads' | 'Contractor' | 'Subscription'
+  | 'Domain Purchase' | 'SSL Certificate' | 'Posting Subscription'
+  | 'Office Supplies' | 'Travel' | 'Software' | 'Hardware'
+  | 'Marketing' | 'Legal' | 'Accounting' | 'Insurance'
+  | 'Rent' | 'Salaries' | 'Utilities' | 'Hosting'
+  | 'Other';
+
 export interface BusinessExpense {
   id: string;
   brand: Brand;
-  category: 'Tools' | 'Ads' | 'Contractor' | 'Subscription' | 'Domain Purchase' | 'SSL Certificate' | 'Posting Subscription' | 'Other';
+  category: BusinessExpenseCategory;
   amount: number;
   date: string;
   createdAt: string;
   userId?: string;
 }
+
+export type PersonalExpenseCategory =
+  | 'Food & Dining' | 'Housing' | 'Transportation' | 'Entertainment'
+  | 'Utilities' | 'Healthcare' | 'Shopping' | 'Groceries'
+  | 'Dining Out' | 'Clothing' | 'Electronics' | 'Personal Care'
+  | 'Gifts' | 'Subscriptions' | 'Insurance' | 'Travel'
+  | 'Education' | 'Home Maintenance' | 'Investments'
+  | 'Other';
 
 export interface Task {
   id: string;

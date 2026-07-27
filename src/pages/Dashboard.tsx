@@ -123,7 +123,11 @@ export default function Dashboard() {
   attentionItems.sort((a, b) => a.date.getTime() - b.date.getTime());
 
   const triggerEvent = (event: string, path: string) => {
-    navigate(path, { state: { openModal: event } });
+    if (event === 'open-add-expense-modal') {
+      window.dispatchEvent(new Event('open-add-expense-modal'));
+    } else {
+      navigate(path, { state: { openModal: event } });
+    }
   };
 
   return (
@@ -135,7 +139,7 @@ export default function Dashboard() {
         </div>
         <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 w-full lg:w-auto">
           <Button onClick={() => triggerEvent('open-income-modal', '/admin-shubhaminfinity/personal')} className="bg-white border-gray-200 hover:bg-gray-50 text-xs text-gray-900 shadow-sm"><ArrowUpRight size={14} className="mr-1 inline" /> Income</Button>
-          <Button onClick={() => triggerEvent('open-expense-modal', '/admin-shubhaminfinity/personal')} className="bg-white border-gray-200 hover:bg-gray-50 text-xs text-gray-900 shadow-sm"><ArrowDownRight size={14} className="mr-1 inline" /> Expense</Button>
+          <Button onClick={() => triggerEvent('open-add-expense-modal', '')} className="bg-white border-gray-200 hover:bg-gray-50 text-xs text-gray-900 shadow-sm"><ArrowDownRight size={14} className="mr-1 inline" /> Expense</Button>
           <Button onClick={() => triggerEvent('open-lead-modal', '/admin-shubhaminfinity/business')} className="bg-white border-gray-200 hover:bg-gray-50 text-xs text-gray-900 shadow-sm"><Briefcase size={14} className="mr-1 inline" /> Lead</Button>
           <Button onClick={() => triggerEvent('open-task-modal', '/admin-shubhaminfinity/tasks')} className="bg-white border-gray-200 hover:bg-gray-50 text-xs text-gray-900 shadow-sm"><PlusCircle size={14} className="mr-1 inline" /> Task</Button>
 

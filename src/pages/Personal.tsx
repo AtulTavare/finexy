@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useData } from '../store/DataContext';
 import { Card, Button, Input, Select, Label, Modal, Badge, DatePicker, Textarea, ConfirmDialog } from '../components/ui';
+import { AddExpenseModal } from '../components/AddExpenseModal';
 import { formatCurrency } from '../lib/utils';
 import { PersonalExpense, PersonalDebt } from '../types';
 import { format } from 'date-fns';
@@ -162,7 +163,7 @@ export default function Personal() {
         </div>
       </Card>
 
-      <ExpenseModal isOpen={showExpenseModal} onClose={() => { setShowExpenseModal(false); setEditingExpense(null); }} onSave={addPersonalExpense} onUpdate={updatePersonalExpense} editItem={editingExpense} />
+      <AddExpenseModal isOpen={showExpenseModal} onClose={() => { setShowExpenseModal(false); setEditingExpense(null); }} onSavePersonal={addPersonalExpense} onUpdatePersonal={updatePersonalExpense} editPersonal={editingExpense} initialType="personal" />
       <DebtModal isOpen={showDebtModal} onClose={() => { setShowDebtModal(false); setEditingDebt(null); }} onSave={addPersonalDebt} onUpdate={updatePersonalDebt} editItem={editingDebt} />
       <ConfirmDialog
         isOpen={!!deleteTarget}
@@ -181,82 +182,6 @@ export default function Personal() {
 }
 
 // Sub-components for forms
-
-interface ExpenseModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (item: Omit<PersonalExpense, 'id' | 'createdAt' | 'dayOfWeek'>) => void;
-  onUpdate?: (id: string, updates: Partial<PersonalExpense>) => void;
-  editItem?: PersonalExpense | null;
-}
-
-function ExpenseModal({ isOpen, onClose, onSave, onUpdate, editItem }: ExpenseModalProps) {
-  const [reason, setReason] = useState('');
-  const [amount, setAmount] = useState('');
-  const [date, setDate] = useState(new Date());
-  const [category, setCategory] = useState('Food & Dining');
-  const [paymentMethod, setPaymentMethod] = useState('Credit Card');
-  const [description, setDescription] = useState('');
-
-  useEffect(() => {
-    if (editItem) {
-      setReason(editItem.reason);
-      setAmount(editItem.amount.toString());
-      setDate(new Date(editItem.date));
-      setCategory(editItem.category);
-      setPaymentMethod(editItem.paymentMethod);
-      setDescription(editItem.description || '');
-    } else {
-      setReason(''); setAmount(''); setDate(new Date()); setCategory('Food & Dining'); setPaymentMethod('Credit Card'); setDescription('');
-    }
-  }, [editItem, isOpen]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!reason || !amount || !date) return;
-    if (editItem && onUpdate) {
-      onUpdate(editItem.id, { reason, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd'), category, paymentMethod, description: description || undefined });
-    } else {
-      onSave({ reason, amount: parseFloat(amount), date: format(date, 'yyyy-MM-dd'), category, paymentMethod, description: description || undefined });
-    }
-    onClose();
-  };
-
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} title={editItem ? 'Edit Expense' : 'Add Expense'}>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div><Label>Reason</Label><Input value={reason} onChange={e => setReason(e.target.value)} placeholder="e.g. Groceries" required /></div>
-        <div><Label>Amount</Label><Input type="number" step="0.01" value={amount} onChange={e => setAmount(e.target.value)} required /></div>
-        <div><Label>Date</Label><DatePicker value={date} onChange={setDate} /></div>
-        <div>
-          <Label>Category</Label>
-          <Select value={category} onChange={e => setCategory(e.target.value)}>
-            <option value="Food & Dining">Food & Dining</option>
-            <option value="Housing">Housing</option>
-            <option value="Transportation">Transportation</option>
-            <option value="Entertainment">Entertainment</option>
-            <option value="Domain Purchase">Domain Purchase</option>
-            <option value="SSL Certificate">SSL Certificate</option>
-            <option value="Posting Subscription">Posting Subscription</option>
-            <option value="Other">Other</option>
-          </Select>
-        </div>
-        <div>
-          <Label>Payment Method</Label>
-          <Select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}>
-            <option value="Credit Card">Credit Card</option>
-            <option value="Debit Card">Debit Card</option>
-            <option value="Cash">Cash</option>
-            <option value="Bank Transfer">Bank Transfer</option>
-            <option value="UPI">UPI</option>
-          </Select>
-        </div>
-        <div><Label>Description (Optional)</Label><Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Additional notes..." /></div>
-        <Button type="submit" className="w-full mt-4">{editItem ? 'Update Expense' : 'Save Expense'}</Button>
-      </form>
-    </Modal>
-  );
-}
 
 interface DebtModalProps {
   isOpen: boolean;
