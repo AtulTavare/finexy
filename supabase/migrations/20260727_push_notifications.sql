@@ -47,7 +47,6 @@ alter table projects replica identity full;
 alter table tasks replica identity full;
 alter table meetings replica identity full;
 alter table business_payments replica identity full;
-alter table engagements replica identity full;
 
 -- Ensure tables are in the realtime publication
 do $$
@@ -75,10 +74,6 @@ begin
   perform * from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'business_payments';
   if not found then
     alter publication supabase_realtime add table business_payments;
-  end if;
-  perform * from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'engagements';
-  if not found then
-    alter publication supabase_realtime add table engagements;
   end if;
 end
 $$;

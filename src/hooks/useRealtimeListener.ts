@@ -34,11 +34,6 @@ const EVENT_MAP: Record<string, { title: string; body: (payload: Record<string, 
     body: (p) => `Payment of ${p.amount ?? ''} received`,
     url: '/admin-shubhaminfinity/business',
   },
-  engagements: {
-    title: 'Engagement Update',
-    body: (p) => `Engagement ${p.type ?? ''} ${p.status ? 'is now ' + p.status : 'created'}`,
-    url: '/admin-shubhaminfinity/business',
-  },
 };
 
 const CLIENT_EVENT_MAP: Record<string, { title: string; body: (payload: Record<string, unknown>) => string; url?: string }> = {
