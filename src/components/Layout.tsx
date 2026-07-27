@@ -7,6 +7,7 @@ import {
 import { useAuth } from '../store/AuthContext';
 import { useData } from '../store/DataContext';
 import { AddExpenseModal } from './AddExpenseModal';
+import { PaymentModal } from './modals';
 import { ConfirmDialog } from './ui';
 
 const NAV_ITEMS = [
@@ -23,15 +24,22 @@ export function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
-  const { addPersonalExpense, addBusinessExpense } = useData();
+  const { addPersonalExpense, addBusinessExpense, addBusinessPayment, updateBusinessPayment, updateBusinessExpense, clients, projects, businessPayments, addInstallment } = useData();
   const [fabOpen, setFabOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   useEffect(() => {
     const onOpenExpense = () => setShowExpenseModal(true);
     window.addEventListener('open-add-expense-modal', onOpenExpense);
     return () => window.removeEventListener('open-add-expense-modal', onOpenExpense);
+  }, []);
+
+  useEffect(() => {
+    const onOpenPayment = () => setShowPaymentModal(true);
+    window.addEventListener('open-payment-modal', onOpenPayment);
+    return () => window.removeEventListener('open-payment-modal', onOpenPayment);
   }, []);
 
   const trigger = (event: string, path: string) => {
@@ -73,6 +81,7 @@ export function Layout() {
   } else if (location.pathname === '/admin-shubhaminfinity/dashboard') {
     fabActions = [
       { label: 'Add Task', action: () => trigger('open-task-modal', '/admin-shubhaminfinity/tasks') },
+      { label: 'Log Payment', action: () => { setShowPaymentModal(true); setFabOpen(false); } },
       { label: 'Add Expense', action: addExpense },
       { label: 'Add Lead', action: () => trigger('open-lead-modal', '/admin-shubhaminfinity/business') },
     ];
@@ -200,6 +209,7 @@ export function Layout() {
         </main>
       </div>
       <AddExpenseModal isOpen={showExpenseModal} onClose={() => setShowExpenseModal(false)} onSavePersonal={addPersonalExpense} onSaveBusiness={addBusinessExpense} />
+      <PaymentModal isOpen={showPaymentModal} onClose={() => setShowPaymentModal(false)} onSaveIncoming={addBusinessPayment} onUpdateIncoming={updateBusinessPayment} onSaveOutgoing={addBusinessExpense} onUpdateOutgoing={updateBusinessExpense} clients={clients} payments={businessPayments} projects={projects} onSaveInstallment={addInstallment} />
       <ConfirmDialog
         isOpen={showLogoutConfirm}
         title="Sign Out"
