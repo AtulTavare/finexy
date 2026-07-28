@@ -181,7 +181,7 @@ export default function ClientPayments() {
               </tr>
             </thead>
             <tbody>
-              {businessPayments.map(p => (
+              {[...businessPayments].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(p => (
                 <tr key={p.id} className="border-b border-gray-200 hover:bg-gray-50">
                   <td className="p-4 md:p-6 text-gray-900 whitespace-nowrap">{format(new Date(p.date), 'MMM d, yyyy')}</td>
                   <td className="p-4 md:p-6"><span className="text-gray-900">{p.serviceName}</span></td>

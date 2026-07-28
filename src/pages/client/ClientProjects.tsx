@@ -196,7 +196,7 @@ export default function ClientProjects() {
                 )}
               </div>
               {(() => {
-                const projectInsts = installments.filter(i => i.projectId === p.id && i.status === 'pending');
+                const projectInsts = installments.filter(i => i.projectId === p.id && i.status === 'pending').sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime());
                 if (projectInsts.length === 0) return null;
                 return (
                   <div className="mt-2 pt-2 border-t border-gray-50">

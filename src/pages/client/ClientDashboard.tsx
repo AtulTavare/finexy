@@ -132,7 +132,7 @@ export default function ClientDashboard() {
   const overdueInstallments = installments.filter(i => {
     const isOverdue = i.status === 'pending' && new Date(i.dueDate) < now;
     return isOverdue;
-  });
+  }).sort((a, b) => new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime());
 
   return (
     <div className="space-y-6">
