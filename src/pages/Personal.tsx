@@ -97,11 +97,11 @@ export default function Personal() {
                   <tbody>
                     {sortedExpenses.map(exp => (
                       <tr key={exp.id} className="border-b border-gray-200 hover:bg-gray-50 cursor-pointer" onClick={() => { setEditingExpense(exp); setShowExpenseModal(true); }}>
-                        <td className="py-2.5 md:py-3 hidden md:table-cell text-gray-900">{format(new Date(exp.date), 'MMM d, yyyy')}</td>
+                        <td className="py-2.5 md:py-3 hidden md:table-cell text-gray-900">{exp.fromDate ? `${format(new Date(exp.fromDate), 'MMM d')} — ${format(new Date(exp.toDate!), 'MMM d, yyyy')}` : format(new Date(exp.date), 'MMM d, yyyy')}</td>
                         <td className="py-2.5 md:py-3">
                           <div className="font-medium">{exp.reason}</div>
                           {exp.description && <div className="text-[10px] text-gray-500 mt-0.5">{exp.description}</div>}
-                          <div className="md:hidden text-[10px] text-gray-900 mt-1">{format(new Date(exp.date), 'MMM d')} &bull; {exp.category}</div>
+                          <div className="md:hidden text-[10px] text-gray-900 mt-1">{exp.fromDate ? `${format(new Date(exp.fromDate), 'MMM d')}—${format(new Date(exp.toDate!), 'MMM d')}` : format(new Date(exp.date), 'MMM d')} &bull; {exp.category}</div>
                           <div className="hidden md:block text-[10px] text-gray-900 mt-1">via {exp.paymentMethod}</div>
                         </td>
                         <td className="py-2.5 md:py-3 hidden md:table-cell"><Badge>{exp.category}</Badge></td>

@@ -49,6 +49,9 @@ export function AddExpenseModal({
   const [customCategory, setCustomCategory] = useState('');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date());
+  const [dateMode, setDateMode] = useState<'single' | 'period'>('single');
+  const [fromDate, setFromDate] = useState(new Date());
+  const [toDate, setToDate] = useState(new Date());
   const [reason, setReason] = useState('');
   const [paymentMethod, setPaymentMethod] = useState(PAYMENT_METHODS[0]);
   const [description, setDescription] = useState('');
@@ -56,7 +59,7 @@ export function AddExpenseModal({
   const categories = type === 'personal' ? PERSONAL_CATEGORIES : BUSINESS_CATEGORIES;
   const isOther = category === 'Other';
 
-  const resetForm = (t: ExpenseType, cat?: string, reasonVal?: string, amt?: string, dt?: Date, pm?: string, desc?: string, custom?: string) => {
+  const resetForm = (t: ExpenseType, cat?: string, reasonVal?: string, amt?: string, dt?: Date, pm?: string, desc?: string, custom?: string, fromDt?: Date, toDt?: Date) => {
     setType(t);
     const cats = t === 'personal' ? PERSONAL_CATEGORIES : BUSINESS_CATEGORIES;
     if (cat && !cats.includes(cat)) {
@@ -69,13 +72,16 @@ export function AddExpenseModal({
     setReason(reasonVal ?? '');
     setAmount(amt ?? '');
     setDate(dt ?? new Date());
+    setDateMode(fromDt || toDt ? 'period' : 'single');
+    setFromDate(fromDt ?? dt ?? new Date());
+    setToDate(toDt ?? dt ?? new Date());
     setPaymentMethod(pm ?? PAYMENT_METHODS[0]);
     setDescription(desc ?? '');
   };
 
   useEffect(() => {
     if (editPersonal) {
-      resetForm('personal', editPersonal.category, editPersonal.reason, editPersonal.amount.toString(), new Date(editPersonal.date), editPersonal.paymentMethod, editPersonal.description || '');
+      resetForm('personal', editPersonal.category, editPersonal.reason, editPersonal.amount.toString(), new Date(editPersonal.date), editPersonal.paymentMethod, editPersonal.description || '', undefined, editPersonal.fromDate ? new Date(editPersonal.fromDate) : undefined, editPersonal.toDate ? new Date(editPersonal.toDate) : undefined);
     } else if (editBusiness) {
       resetForm('business', editBusiness.category, '', editBusiness.amount.toString(), new Date(editBusiness.date));
     } else {
@@ -88,15 +94,18 @@ export function AddExpenseModal({
     if (!amount) return;
 
     const finalCategory = isOther ? customCategory.trim() || 'Other' : category;
-    const dateStr = format(date, 'yyyy-MM-dd');
     const amt = parseFloat(amount);
+
+    const dateStr = dateMode === 'period' ? format(fromDate, 'yyyy-MM-dd') : format(date, 'yyyy-MM-dd');
 
     if (type === 'personal') {
       if (!reason || !onSavePersonal) return;
+      const fromDateStr = dateMode === 'period' ? format(fromDate, 'yyyy-MM-dd') : undefined;
+      const toDateStr = dateMode === 'period' ? format(toDate, 'yyyy-MM-dd') : undefined;
       if (editPersonal && onUpdatePersonal) {
-        onUpdatePersonal(editPersonal.id, { reason, amount: amt, date: dateStr, category: finalCategory, paymentMethod, description: description || undefined });
+        onUpdatePersonal(editPersonal.id, { reason, amount: amt, date: dateStr, fromDate: fromDateStr, toDate: toDateStr, category: finalCategory, paymentMethod, description: description || undefined });
       } else {
-        onSavePersonal({ reason, amount: amt, date: dateStr, category: finalCategory, paymentMethod, description: description || undefined });
+        onSavePersonal({ reason, amount: amt, date: dateStr, fromDate: fromDateStr, toDate: toDateStr, category: finalCategory, paymentMethod, description: description || undefined });
       }
     } else {
       if (editBusiness && onUpdateBusiness) {
@@ -155,7 +164,20 @@ export function AddExpenseModal({
 
         <div>
           <Label>Date</Label>
-          <DatePicker value={date} onChange={setDate} />
+          {type === 'personal' && (
+            <div className="flex bg-gray-100 p-0.5 rounded-lg mb-2">
+              <button type="button" className={`flex-1 py-1.5 text-[11px] font-semibold rounded-md transition-all ${dateMode === 'single' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`} onClick={() => setDateMode('single')}>One day</button>
+              <button type="button" className={`flex-1 py-1.5 text-[11px] font-semibold rounded-md transition-all ${dateMode === 'period' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'}`} onClick={() => setDateMode('period')}>Period</button>
+            </div>
+          )}
+          {dateMode === 'single' ? (
+            <DatePicker value={date} onChange={setDate} />
+          ) : (
+            <div className="flex gap-2">
+              <div className="flex-1"><Label className="text-[10px]">From</Label><DatePicker value={fromDate} onChange={setFromDate} /></div>
+              <div className="flex-1"><Label className="text-[10px]">To</Label><DatePicker value={toDate} onChange={setToDate} /></div>
+            </div>
+          )}
         </div>
 
         <div>

@@ -19,6 +19,8 @@ export interface PersonalExpense {
   category: string;
   reason: string;
   date: string;
+  fromDate?: string;
+  toDate?: string;
   dayOfWeek: string;
   paymentMethod: string;
   description?: string;
