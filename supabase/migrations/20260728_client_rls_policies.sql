@@ -57,3 +57,29 @@ SET search_path = 'auth'
 AS $$
   SELECT id FROM auth.users WHERE email = $1;
 $$;
+
+-- Create link_client_user function to insert/update client_users record
+CREATE OR REPLACE FUNCTION link_client_user(
+  user_id uuid,
+  client_id text,
+  user_name text,
+  email text
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  DELETE FROM client_users WHERE user_id = link_client_user.user_id;
+  INSERT INTO client_users (user_id, client_id, user_name, email)
+  VALUES (link_client_user.user_id, link_client_user.client_id, link_client_user.user_name, link_client_user.email);
+END;
+$$;
+
+-- Seed the client_users record for chaitanya@infinity.com if missing
+INSERT INTO client_users (user_id, client_id, user_name, email)
+SELECT au.id, cl.id, cl.name, au.email
+FROM auth.users au
+JOIN clients cl ON LOWER(cl.mail) = LOWER(au.email)
+WHERE au.email = 'chaitanya@infinity.com'
+  AND NOT EXISTS (SELECT 1 FROM client_users cu WHERE cu.user_id = au.id);
