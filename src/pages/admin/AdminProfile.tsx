@@ -12,7 +12,7 @@ export default function AdminProfile() {
 
   const confirmLogout = async () => {
     await signOut();
-    navigate('/admin-shubhaminfinity/login', { replace: true });
+    navigate('/login', { replace: true });
   };
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(user?.user_metadata?.avatar_url || null);

@@ -14,7 +14,7 @@ export default function ClientProfile() {
 
   const confirmLogout = async () => {
     await signOut();
-    navigate('/client/login', { replace: true });
+    navigate('/login', { replace: true });
   };
 
   if (!client) return null;

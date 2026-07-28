@@ -56,7 +56,7 @@ export function Layout() {
 
   const confirmLogout = async () => {
     await signOut();
-    navigate('/admin-shubhaminfinity/login', { replace: true });
+    navigate('/login', { replace: true });
   };
 
   let fabActions = [

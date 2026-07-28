@@ -101,8 +101,8 @@ export default function Login() {
             <span className="text-xl font-bold">Infinity</span>
           </div>
 
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 mb-2">Welcome back</h1>
-          <p className="text-sm text-gray-500 mb-8">Sign in to your account to continue.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900 mb-2">Welcome</h1>
+          <p className="text-sm text-gray-500 mb-8">Sign in to continue.</p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>

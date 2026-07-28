@@ -15,7 +15,6 @@ import Projects from './pages/Projects';
 import ProjectDetail from './pages/ProjectDetail';
 import AppCalendar from './pages/Calendar';
 import AdminProfile from './pages/admin/AdminProfile';
-import ClientLogin from './pages/client/ClientLogin';
 import ClientDashboard from './pages/client/ClientDashboard';
 import ClientProjects from './pages/client/ClientProjects';
 import ClientProjectDetail from './pages/client/ClientProjectDetail';
@@ -37,9 +36,7 @@ createRoot(document.getElementById('root')!).render(
         <NotificationProvider>
         <InstallPrompt />
         <Routes>
-          <Route path="/login" element={<ClientLogin />} />
-          <Route path="/client/login" element={<ClientLogin />} />
-          <Route path="/admin-shubhaminfinity/login" element={<Login />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/admin-shubhaminfinity" element={<AuthGuard />}>
             <Route element={<DataProvider> <Layout /> </DataProvider>}>
               <Route index element={<Navigate to="dashboard" replace />} />
