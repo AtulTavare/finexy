@@ -43,6 +43,11 @@ USING (
   )
 );
 
+-- Allow clients to view their own client_users record
+CREATE POLICY "Clients can view own client_users record"
+ON client_users FOR SELECT
+USING (user_id = auth.uid());
+
 -- Create get_auth_user_id function to resolve email to user id
 CREATE OR REPLACE FUNCTION get_auth_user_id(email text)
 RETURNS uuid
