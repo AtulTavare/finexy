@@ -3,7 +3,7 @@ CREATE POLICY "Clients can view own record"
 ON clients FOR SELECT
 USING (
   auth.uid() IN (
-    SELECT user_id FROM client_users WHERE client_id = id
+   SELECT user_id FROM client_users WHERE client_id = clients.id
   )
 );
 
@@ -40,15 +40,6 @@ ON client_documents FOR SELECT
 USING (
   auth.uid() IN (
     SELECT user_id FROM client_users WHERE client_id = client_documents.client_id
-  )
-);
-
--- Allow clients to view their own installments
-CREATE POLICY "Clients can view own installments"
-ON installments FOR SELECT
-USING (
-  auth.uid() IN (
-    SELECT user_id FROM client_users WHERE client_id = installments.client_id
   )
 );
 
