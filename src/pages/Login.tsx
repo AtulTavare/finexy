@@ -4,6 +4,8 @@ import { useAuth } from '../store/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import Lottie from 'lottie-react';
 import animationData from '../assets/infinity-loader.json';
+import ClientOnboarding from '../components/ClientOnboarding';
+import { Eye, EyeOff } from 'lucide-react';
 
 const SLIDE_COUNT = 12;
 
@@ -19,17 +21,20 @@ export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [showLogin, setShowLogin] = useState(false);
   const slides = useRef(generateSlides());
 
   useEffect(() => {
+    if (!showLogin) return;
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % SLIDE_COUNT);
     }, 2000);
     return () => clearInterval(interval);
-  }, []);
+  }, [showLogin]);
 
   if (authLoading) {
     return (
@@ -46,6 +51,10 @@ export default function Login() {
       return <Navigate to="/client/dashboard" replace />;
     }
     return <Navigate to="/admin-shubhaminfinity/dashboard" replace />;
+  }
+
+  if (!showLogin) {
+    return <ClientOnboarding onComplete={() => setShowLogin(true)} />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -119,14 +128,24 @@ export default function Login() {
 
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1.5">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
-                placeholder="Enter your password"
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 pr-11 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
+                  placeholder="Enter your password"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(p => !p)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
 
             {error && (

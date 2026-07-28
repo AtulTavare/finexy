@@ -31,8 +31,8 @@ const benefits = [
 
 const screens = [
   { id: 'welcome', mobileMedia: 'https://res.cloudinary.com/dlkxwisy3/video/upload/v1785147324/infinity_onboarding_4_qufy7g.mp4', desktopMedia: 'https://res.cloudinary.com/dlkxwisy3/video/upload/v1785147324/infinity_onboarding_4_qufy7g.mp4', isVideo: true, desktopGradient: 'from-violet-950/70 via-fuchsia-900/30 to-transparent' },
-  { id: 'services', mobileMedia: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=900&q=80', desktopMedia: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=900&q=80', isVideo: false, desktopGradient: 'from-orange-950/70 via-amber-900/30 to-transparent' },
-  { id: 'benefits', mobileMedia: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=900&q=80', desktopMedia: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=900&q=80', isVideo: false, desktopGradient: 'from-emerald-950/70 via-teal-900/30 to-transparent' },
+  { id: 'services', mobileMedia: 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=900&q=80', desktopMedia: 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=900&q=80', isVideo: false, desktopGradient: 'from-orange-950/70 via-amber-900/30 to-transparent' },
+  { id: 'benefits', mobileMedia: 'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=900&q=80', desktopMedia: 'https://images.unsplash.com/photo-1600880292203-757bb62b4baf?w=900&q=80', isVideo: false, desktopGradient: 'from-emerald-950/70 via-teal-900/30 to-transparent' },
   { id: 'thankyou', mobileMedia: 'https://res.cloudinary.com/dlkxwisy3/video/upload/v1785147024/infinity_onboard_kuenkr.mp4', desktopMedia: 'https://res.cloudinary.com/dlkxwisy3/video/upload/v1785147024/infinity_onboard_kuenkr.mp4', isVideo: true, desktopGradient: 'from-sky-950/70 via-indigo-900/30 to-transparent' },
 ];
 
