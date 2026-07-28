@@ -1,4 +1,4 @@
--- Allow clients to view their own client record via client_users link
+DROP POLICY IF EXISTS "Clients can view own record" ON clients;
 CREATE POLICY "Clients can view own record"
 ON clients FOR SELECT
 USING (
@@ -7,7 +7,7 @@ USING (
   )
 );
 
--- Allow clients to view projects linked to them
+DROP POLICY IF EXISTS "Clients can view own projects" ON projects;
 CREATE POLICY "Clients can view own projects"
 ON projects FOR SELECT
 USING (
@@ -16,7 +16,7 @@ USING (
   )
 );
 
--- Allow clients to view their own business payments
+DROP POLICY IF EXISTS "Clients can view own payments" ON business_payments;
 CREATE POLICY "Clients can view own payments"
 ON business_payments FOR SELECT
 USING (
@@ -25,7 +25,7 @@ USING (
   )
 );
 
--- Allow clients to view their own meetings
+DROP POLICY IF EXISTS "Clients can view own meetings" ON meetings;
 CREATE POLICY "Clients can view own meetings"
 ON meetings FOR SELECT
 USING (
@@ -34,7 +34,7 @@ USING (
   )
 );
 
--- Allow clients to view their own documents
+DROP POLICY IF EXISTS "Clients can view own documents" ON client_documents;
 CREATE POLICY "Clients can view own documents"
 ON client_documents FOR SELECT
 USING (
@@ -43,7 +43,7 @@ USING (
   )
 );
 
--- Allow clients to view their own client_users record
+DROP POLICY IF EXISTS "Clients can view own client_users record" ON client_users;
 CREATE POLICY "Clients can view own client_users record"
 ON client_users FOR SELECT
 USING (user_id = auth.uid());
