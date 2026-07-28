@@ -102,19 +102,21 @@ export function ClientDataProvider({ children }: { children: React.ReactNode }) 
         };
         setClient(clientInfo);
 
-        const [projRes, payRes, docRes, meetRes, instRes] = await Promise.all([
-          supabase.from('projects').select('*').eq('client_id', cu.client_id).order('created_at', { ascending: false }),
-          supabase.from('business_payments').select('*').eq('client_id', cu.client_id).order('date', { ascending: false }),
-          supabase.from('client_documents').select('*').eq('client_id', cu.client_id).order('created_at', { ascending: false }),
-          supabase.from('meetings').select('*').eq('client_id', cu.client_id).order('date', { ascending: false }),
-          supabase.from('installments').select('*').eq('client_id', cu.client_id).order('due_date', { ascending: true }),
+        const q = async (table: string) => {
+          try {
+            const { data } = await supabase.from(table).select('*').eq('client_id', cu.client_id);
+            return (data || []).map(r => toCamelCase(r));
+          } catch { return []; }
+        };
+
+        const [projData, payData, docData, meetData] = await Promise.all([
+          q('projects'), q('business_payments'), q('client_documents'), q('meetings'),
         ]);
 
-        setProjects((projRes.data || []).map(r => toCamelCase(r)) as any);
-        setBusinessPayments((payRes.data || []).map(r => toCamelCase(r)) as any);
-        setDocuments((docRes.data || []).map(r => toCamelCase(r)) as any);
-        setMeetings((meetRes.data || []).map(r => toCamelCase(r)) as any);
-        setInstallments((instRes.data || []).map(r => toCamelCase(r)) as any);
+        setProjects(projData as any);
+        setBusinessPayments(payData as any);
+        setDocuments(docData as any);
+        setMeetings(meetData as any);
       } catch (e) {
         console.error('Failed to load client data', e);
       } finally {
