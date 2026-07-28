@@ -6,7 +6,8 @@ import { AddExpenseModal } from '../components/AddExpenseModal';
 import { formatCurrency } from '../lib/utils';
 import { Brand, Lead, Client, BusinessPayment, BusinessExpense, Project, Installment } from '../types';
 import { format } from 'date-fns';
-import { Trash2, User, Camera } from 'lucide-react';
+import { DndContext, DragOverlay, useDraggable, useDroppable, PointerSensor, useSensor, useSensors, closestCorners } from '@dnd-kit/core';
+import { Trash2, User, Camera, GripVertical } from 'lucide-react';
 import { supabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase';
 import { useAuth } from '../store/AuthContext';
 import { PaymentModal } from '../components/modals';
@@ -214,50 +215,44 @@ function PipelineView({ leads, updateLead, deleteLead, onEdit }: PipelineViewPro
   const stages = ['Lead', 'Qualified', 'Proposal Sent', 'Negotiation', 'Won', 'Lost'];
   const [stageFilter, setStageFilter] = useState('All');
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [activeLead, setActiveLead] = useState<Lead | null>(null);
 
   const filteredLeads = stageFilter === 'All' ? leads : leads.filter(l => l.stage === stageFilter);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-  // Desktop: Kanban columns, no horizontal scroll
+  const handleDragStart = (event: any) => {
+    const lead = event.active.data.current?.lead as Lead | undefined;
+    if (lead) setActiveLead(lead);
+  };
+
+  const handleDragEnd = (event: any) => {
+    const { active, over } = event;
+    setActiveLead(null);
+    if (!over) return;
+    const lead = active.data.current?.lead as Lead | undefined;
+    if (!lead) return;
+    const newStage = over.id as Lead['stage'];
+    if (lead.stage !== newStage) updateLead(lead.id, { stage: newStage });
+    onEdit(lead);
+  };
+
+  // Desktop: Kanban columns with DnD
   const renderKanban = () => (
-    <div className="hidden lg:flex space-x-3 min-h-[400px]">
-      {stages.map(stage => {
-        const stageLeads = leads.filter(l => l.stage === stage);
-        return (
-          <div key={stage} className="flex-1 bg-white border border-gray-200 flex flex-col rounded-xl min-w-0">
-            <div className="p-2 border-b border-gray-100 bg-gray-50 rounded-t-xl flex justify-between items-center">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-900 truncate">{stage}</span>
-              <span className="text-[10px] tabular bg-gray-100 px-1.5 py-0.5 rounded text-gray-500 shrink-0 ml-1">{stageLeads.length}</span>
-            </div>
-            <div className="flex-1 p-1.5 space-y-1.5 overflow-y-auto no-scrollbar">
-              {stageLeads.length === 0 ? (
-                <div className="text-[10px] text-gray-400 text-center italic py-4">No leads</div>
-              ) : stageLeads.map(l => (
-                <div key={l.id} className="bg-white border border-gray-200 p-2 shadow-sm hover:border-orange-500 rounded-lg transition-colors group cursor-pointer" onClick={() => onEdit(l)}>
-                  <div className="flex justify-between items-start mb-1">
-                    <div className="font-medium text-xs text-gray-900 truncate">{l.name}</div>
-                    <Badge className="shrink-0 ml-1 !text-[9px] !px-1.5">{l.brand}</Badge>
-                  </div>
-                  <div className="text-sm font-light tabular mb-1">{formatCurrency(l.estimatedValue)}</div>
-                  {l.nextAction && (
-                    <div className="text-[9px] text-gray-500 truncate mb-1">Next: {l.nextAction}</div>
-                  )}
-                  <div className="flex items-center space-x-1 pt-1.5 border-t border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <select
-                          className="text-[9px] bg-gray-100 border-none text-gray-900 py-0.5 px-1 rounded cursor-pointer"
-                          value={l.stage}
-                          onChange={(e) => updateLead(l.id, { stage: e.target.value })}
-                        >
-                          {stages.map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                        <button onClick={() => { setDeleteTarget({ id: l.id, name: l.name }) }} className="text-red-500 text-[9px] hover:underline cursor-pointer ml-auto">Delete</button>
-                  </div>
-                </div>
-              ))}
-            </div>
+    <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <div className="hidden lg:flex space-x-3 min-h-[400px]">
+        {stages.map(stage => (
+          <KanbanColumn key={stage} stage={stage} leads={leads.filter(l => l.stage === stage)} stages={stages} updateLead={updateLead} onEdit={onEdit} onDeleteTarget={(t) => setDeleteTarget(t)} />
+        ))}
+      </div>
+      <DragOverlay dropAnimation={null}>
+        {activeLead ? (
+          <div className="bg-white border-2 border-orange-500 p-2 shadow-lg rounded-lg w-48 opacity-90">
+            <div className="font-medium text-xs text-gray-900 truncate">{activeLead.name}</div>
+            <div className="text-sm font-light tabular">{formatCurrency(activeLead.estimatedValue)}</div>
           </div>
-        );
-      })}
-    </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 
   // Mobile/Tablet: filtered list
@@ -322,6 +317,65 @@ function PipelineView({ leads, updateLead, deleteLead, onEdit }: PipelineViewPro
         onCancel={() => setDeleteTarget(null)}
       />
     </>
+  );
+}
+
+function KanbanColumn({ stage, leads, stages, updateLead, onEdit, onDeleteTarget }: { key?: string; stage: string; leads: Lead[]; stages: string[]; updateLead: (id: string, updates: Partial<Lead>) => void; onEdit: (lead: Lead) => void; onDeleteTarget: (t: { id: string; name: string } | null) => void }) {
+  const { setNodeRef, isOver } = useDroppable({ id: stage });
+  return (
+    <div ref={setNodeRef} className={`flex-1 bg-white border flex flex-col rounded-xl min-w-0 transition-colors ${isOver ? 'border-orange-500 bg-orange-50/30' : 'border-gray-200'}`}>
+      <div className="p-2 border-b border-gray-100 bg-gray-50 rounded-t-xl flex justify-between items-center">
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-900 truncate">{stage}</span>
+        <span className="text-[10px] tabular bg-gray-100 px-1.5 py-0.5 rounded text-gray-500 shrink-0 ml-1">{leads.length}</span>
+      </div>
+      <div className="flex-1 p-1.5 space-y-1.5 overflow-y-auto no-scrollbar min-h-[120px]">
+        {leads.length === 0 ? (
+          <div className="text-[10px] text-gray-400 text-center italic py-4">No leads</div>
+        ) : leads.map(l => (
+          <div key={l.id}>
+            <DraggableLeadCard lead={l} stages={stages} updateLead={updateLead} onEdit={onEdit} onDeleteTarget={onDeleteTarget} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DraggableLeadCard({ lead, stages, updateLead, onEdit, onDeleteTarget }: { lead: Lead; stages: string[]; updateLead: (id: string, updates: Partial<Lead>) => void; onEdit: (lead: Lead) => void; onDeleteTarget: (t: { id: string; name: string } | null) => void }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: lead.id,
+    data: { lead, currentStage: lead.stage },
+  });
+  const style = transform ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` } : undefined;
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`bg-white border p-2 shadow-sm rounded-lg transition-colors group ${isDragging ? 'opacity-50 border-orange-500' : 'border-gray-200 hover:border-orange-500 cursor-grab active:cursor-grabbing'}`}
+    >
+      <div className="flex justify-between items-start mb-1">
+        <div className="flex items-center gap-1 min-w-0">
+          <span {...attributes} {...listeners} className="text-gray-300 hover:text-gray-500 transition-colors shrink-0 cursor-grab active:cursor-grabbing"><GripVertical size={12} /></span>
+          <span className="font-medium text-xs text-gray-900 truncate">{lead.name}</span>
+        </div>
+        <Badge className="shrink-0 ml-1 !text-[9px] !px-1.5">{lead.brand}</Badge>
+      </div>
+      <div className="text-sm font-light tabular mb-1">{formatCurrency(lead.estimatedValue)}</div>
+      {lead.nextAction && (
+        <div className="text-[9px] text-gray-500 truncate mb-1">Next: {lead.nextAction}</div>
+      )}
+      <div className="flex items-center space-x-1 pt-1.5 border-t border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+        <select
+          className="text-[9px] bg-gray-100 border-none text-gray-900 py-0.5 px-1 rounded cursor-pointer"
+          value={lead.stage}
+          onChange={(e) => updateLead(lead.id, { stage: e.target.value })}
+        >
+          {stages.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <button onClick={() => { onEdit(lead) }} className="text-[9px] text-gray-500 hover:text-gray-900 hover:underline cursor-pointer ml-1">Edit</button>
+        <button onClick={() => { onDeleteTarget({ id: lead.id, name: lead.name }) }} className="text-red-500 text-[9px] hover:underline cursor-pointer ml-auto">Delete</button>
+      </div>
+    </div>
   );
 }
 
